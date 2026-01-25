@@ -16,7 +16,8 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | Type inference | ✅ Complete | Full type resolution across packages |
 | Cross-package references | ✅ Complete | Handles imports and module paths |
 | Embedded struct flattening | ✅ Complete | Recursive with cycle detection |
-| Field collision detection | ✅ Complete | Errors on naming conflicts |
+| Go field collision detection | ✅ Complete | Errors on duplicate Go field names |
+| JSON name collision detection | ✅ Complete | Prevents duplicate JSON keys (critical for API correctness) |
 | Pointer unwrapping | ✅ Complete | `*string` → optional string |
 | Documentation extraction | ✅ Complete | From Go comments to JSDoc |
 | Position tracking | ✅ Complete | File:line for error messages |
@@ -63,6 +64,7 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | Two-pass normalization | ✅ Complete | Register → flatten |
 | Embedded field promotion | ✅ Complete | Flattens anonymous structs |
 | Cycle detection | ✅ Complete | Prevents infinite recursion |
+| Collision validation | ✅ Complete | Go names before, JSON names after flattening |
 
 ## Type Support
 
@@ -134,7 +136,10 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 - **Embedded struct flattening**: Recursively promotes fields from anonymous embedded structs
 - **Package-aware registry**: Resolves types across package boundaries using full import paths
 - **Cycle detection**: Prevents infinite recursion in self-referential structs
-- **Field collision detection**: Errors when embedded structs have conflicting field names
+- **First-class collision detection**: Validates both Go field names and JSON keys before generation
+  - Catches `UserID` and `UserId` both mapping to `"userId"`
+  - Detects embedded field collisions after flattening
+  - Critical for API correctness - prevents silently broken schemas
 - **5-level optional precedence**: `required` → `optional` → pointer → `omitempty` → default
 - **Position tracking**: Every schema/field tracks source file and line number
 - **Documentation preservation**: Go comments become JSDoc in generated TypeScript
