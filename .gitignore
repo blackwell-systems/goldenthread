@@ -1,0 +1,43 @@
+# Binaries
+/cmd/goldenthread/goldenthread
+/goldenthread
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files (examples)
+examples/*/gen/
+examples/*/*.gen.ts
+examples/*/*.gen.yaml
+
+# Coverage
+coverage.out
+coverage.html
+
+# Build artifacts
+/dist/
+/build/
+
+# Temporary files
+*.tmp
+.goldenthread/
