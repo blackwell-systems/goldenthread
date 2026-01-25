@@ -1,0 +1,16 @@
+# CODEOWNERS for goldenthread
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @blackwell-systems
+
+# Specific ownership for critical paths
+/.github/ @blackwell-systems
+/docs/ @blackwell-systems
+/cmd/goldenthread/ @blackwell-systems
+/internal/ @blackwell-systems
+
+# Release and CI configuration
+/.goreleaser.yml @blackwell-systems
+/.golangci.yml @blackwell-systems
+/go.mod @blackwell-systems
