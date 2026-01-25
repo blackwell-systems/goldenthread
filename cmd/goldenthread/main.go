@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/blackwell-systems/goldenthread/internal/emitter/zod"
+	"github.com/blackwell-systems/goldenthread/internal/hash"
 	"github.com/blackwell-systems/goldenthread/internal/parser"
 	"github.com/blackwell-systems/goldenthread/internal/schema"
 )
@@ -172,18 +173,118 @@ func generate(args []string) error {
 		return fmt.Errorf("some schemas failed to generate")
 	}
 	
+	// Write metadata for drift detection
+	if err := hash.WriteMetadata(*outDir, schemas, "0.1.0"); err != nil {
+		return fmt.Errorf("failed to write metadata: %w", err)
+	}
+	
 	return nil
 }
 
 func check(args []string) error {
-	if len(args) == 0 {
+	// Parse flags
+	fs := flag.NewFlagSet("check", flag.ExitOnError)
+	outDir := fs.String("out", "./gen", "output directory to check")
+	recursive := fs.Bool("recursive", false, "recursively process subdirectories")
+	
+	fs.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage: goldenthread check [options] <directory>\n\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		fs.PrintDefaults()
+	}
+	
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	
+	if fs.NArg() == 0 {
 		return fmt.Errorf("check requires a directory argument")
 	}
-
-	fmt.Println("🧵 goldenthread - checking schemas...")
-	fmt.Printf("   Source: %s\n", args[0])
-	fmt.Println("   This is a placeholder - implementation coming soon")
-
+	
+	inputDir := fs.Arg(0)
+	
+	fmt.Printf("goldenthread - checking schemas\n")
+	fmt.Printf("  Source: %s\n", inputDir)
+	fmt.Printf("  Output: %s\n", *outDir)
+	fmt.Println()
+	
+	// Read existing metadata
+	metadata, err := hash.ReadMetadata(*outDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("no metadata found in %s (run 'goldenthread generate' first)", *outDir)
+		}
+		return fmt.Errorf("failed to read metadata: %w", err)
+	}
+	
+	fmt.Printf("Checking against metadata (version: %s)\n", metadata.Version)
+	
+	// Parse current schemas
+	p := parser.NewParser()
+	var schemas []*schema.Schema
+	
+	if *recursive {
+		schemas, err = p.ParseDirRecursive(inputDir)
+	} else {
+		schemas, err = p.ParseDir(inputDir)
+	}
+	
+	if err != nil {
+		return fmt.Errorf("failed to parse schemas: %w", err)
+	}
+	
+	// Compare schemas
+	var drifted []string
+	var added []string
+	var removed []string
+	
+	// Track which metadata schemas we've seen
+	seen := make(map[string]bool)
+	
+	for _, s := range schemas {
+		seen[s.Name] = true
+		currentHash := hash.ComputeSchemaHash(s)
+		
+		if storedMeta, exists := metadata.Schemas[s.Name]; exists {
+			if storedMeta.Hash != currentHash {
+				drifted = append(drifted, s.Name)
+				fmt.Printf("  ✗ %s - schema has changed\n", s.Name)
+			} else {
+				fmt.Printf("  ✓ %s - up to date\n", s.Name)
+			}
+		} else {
+			added = append(added, s.Name)
+			fmt.Printf("  + %s - new schema (not in metadata)\n", s.Name)
+		}
+	}
+	
+	// Check for removed schemas
+	for name := range metadata.Schemas {
+		if !seen[name] {
+			removed = append(removed, name)
+			fmt.Printf("  - %s - schema removed from source\n", name)
+		}
+	}
+	
+	fmt.Println()
+	
+	// Report results
+	if len(drifted) > 0 || len(added) > 0 || len(removed) > 0 {
+		fmt.Printf("Schemas out of sync:\n")
+		if len(drifted) > 0 {
+			fmt.Printf("  Changed: %d\n", len(drifted))
+		}
+		if len(added) > 0 {
+			fmt.Printf("  Added: %d\n", len(added))
+		}
+		if len(removed) > 0 {
+			fmt.Printf("  Removed: %d\n", len(removed))
+		}
+		fmt.Println("\nRun 'goldenthread generate' to update generated schemas")
+		return fmt.Errorf("schemas are out of sync")
+	}
+	
+	fmt.Printf("All schemas are up to date (%d checked)\n", len(schemas))
 	return nil
 }
 
