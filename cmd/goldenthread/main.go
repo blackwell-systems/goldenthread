@@ -13,6 +13,7 @@ import (
 	"github.com/blackwell-systems/goldenthread/internal/emitter/zod"
 	"github.com/blackwell-systems/goldenthread/internal/hash"
 	"github.com/blackwell-systems/goldenthread/internal/load"
+	"github.com/blackwell-systems/goldenthread/internal/normalize"
 	"github.com/blackwell-systems/goldenthread/internal/parser"
 )
 
@@ -132,6 +133,11 @@ func generate(args []string) error {
 	
 	fmt.Printf("Found %d schema(s)\n", len(schemas))
 	
+	// Flatten embedded structs
+	if err := normalize.FlattenEmbedded(schemas); err != nil {
+		return fmt.Errorf("failed to flatten embedded structs: %w", err)
+	}
+	
 	// Create output directory
 	if err := os.MkdirAll(*outDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
@@ -234,6 +240,11 @@ func check(args []string) error {
 	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
+	}
+	
+	// Flatten embedded structs
+	if err := normalize.FlattenEmbedded(schemas); err != nil {
+		return fmt.Errorf("failed to flatten embedded structs: %w", err)
 	}
 	
 	// Compare schemas

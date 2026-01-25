@@ -45,8 +45,16 @@ func (e *Emitter) Emit(s *schema.Schema) (string, error) {
 	// Schema constant
 	b.WriteString(fmt.Sprintf("export const %sSchema = z.object({\n", s.Name))
 
-	for i, field := range s.Fields {
-		e.emitField(&b, field, i == len(s.Fields)-1)
+	// Filter out embedded fields (they've been flattened)
+	regularFields := make([]schema.Field, 0, len(s.Fields))
+	for _, field := range s.Fields {
+		if !field.Embedded {
+			regularFields = append(regularFields, field)
+		}
+	}
+	
+	for i, field := range regularFields {
+		e.emitField(&b, field, i == len(regularFields)-1)
 	}
 
 	b.WriteString("})\n\n")

@@ -57,7 +57,7 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 				filePath = pkg.Pkg.PkgPath // Last resort
 			}
 			
-			schemas, err := p.extractSchemas(pkg.Fset, file, filePath)
+			schemas, err := p.extractSchemasWithPackage(pkg.Fset, file, filePath, pkg.Pkg.PkgPath)
 			if err != nil {
 				return nil, err
 			}
@@ -81,7 +81,21 @@ func (p *Parser) ParseFile(path string) ([]*schema.Schema, error) {
 		return nil, err
 	}
 
-	return p.extractSchemas(fset, file, path)
+	return p.extractSchemasWithPackage(fset, file, path, "")
+}
+
+// extractSchemasWithPackage extracts schemas with optional full package path.
+func (p *Parser) extractSchemasWithPackage(fset *token.FileSet, file *ast.File, path string, pkgPath string) ([]*schema.Schema, error) {
+	if pkgPath == "" {
+		// Fallback to package name from AST
+		pkgPath = file.Name.Name
+	}
+	return p.extractSchemasInternal(fset, file, path, pkgPath)
+}
+
+// extractSchemas is the old entry point (for backward compat).
+func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string) ([]*schema.Schema, error) {
+	return p.extractSchemasInternal(fset, file, path, file.Name.Name)
 }
 
 // ParseDir parses all Go files in a directory (non-recursive).
@@ -134,8 +148,8 @@ func (p *Parser) ParseDirRecursive(root string) ([]*schema.Schema, error) {
 	return schemas, err
 }
 
-// extractSchemas walks the AST and extracts schema definitions.
-func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string) ([]*schema.Schema, error) {
+// extractSchemasInternal walks the AST and extracts schema definitions.
+func (p *Parser) extractSchemasInternal(fset *token.FileSet, file *ast.File, path string, pkgPath string) ([]*schema.Schema, error) {
 	var schemas []*schema.Schema
 
 	ast.Inspect(file, func(n ast.Node) bool {
@@ -165,7 +179,7 @@ func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string
 		}
 
 		// Extract schema
-		s := p.extractSchema(fset, typeSpec, structType, file.Name.Name, path)
+		s := p.extractSchema(fset, typeSpec, structType, pkgPath, path)
 		if s != nil {
 			schemas = append(schemas, s)
 		}
@@ -195,13 +209,26 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 
 	// Extract fields
 	for _, field := range structType.Fields.List {
-		for _, name := range field.Names {
-			f, err := p.extractField(fset, field, name.Name, path)
+		// Handle embedded fields (no names)
+		if len(field.Names) == 0 {
+			// Embedded field
+			f, err := p.extractEmbeddedField(fset, field, path)
 			if err != nil {
 				return nil
 			}
 			if f != nil {
 				s.Fields = append(s.Fields, *f)
+			}
+		} else {
+			// Regular fields
+			for _, name := range field.Names {
+				f, err := p.extractField(fset, field, name.Name, path)
+				if err != nil {
+					return nil
+				}
+				if f != nil {
+					s.Fields = append(s.Fields, *f)
+				}
 			}
 		}
 	}
@@ -307,6 +334,58 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 		f.Documentation = normalizeDoc(field.Comment.Text())
 	}
 
+	return f, nil
+}
+
+// extractEmbeddedField handles embedded struct fields.
+func (p *Parser) extractEmbeddedField(fset *token.FileSet, field *ast.Field, path string) (*schema.Field, error) {
+	// Extract type to determine the embedded type name
+	pos := fset.Position(field.Pos())
+	
+	// Get the type (use go/types if available)
+	var fieldType schema.Type
+	if p.TypeInfo != nil {
+		fieldType = p.extractTypeWithInfo(field.Type, p.TypeInfo)
+	} else {
+		fieldType = p.extractType(field.Type)
+	}
+	
+	// For embedded fields, we mark them specially
+	// The field name will be the type name
+	typeName := ""
+	var embeddedRef *schema.TypeRef
+	
+	if fieldType.Kind == schema.TypeNamed && fieldType.Ref != nil {
+		typeName = fieldType.Ref.Name
+		embeddedRef = fieldType.Ref
+	} else {
+		// Can't determine embedded type name, skip
+		return nil, nil
+	}
+	
+	f := &schema.Field{
+		GoName:   typeName,
+		JSONName: "", // Embedded fields don't have JSON names (fields are promoted)
+		Type:     fieldType,
+		Optional: false, // Embedded structs themselves are not optional
+		Rules:    schema.FieldRules{},
+		Tags:     make(map[string]string),
+		Pos: schema.SourcePos{
+			File:   path,
+			Line:   pos.Line,
+			Column: pos.Column,
+		},
+		Embedded:     true,
+		EmbeddedType: embeddedRef,
+	}
+	
+	// Extract documentation
+	if field.Doc != nil {
+		f.Documentation = normalizeDoc(field.Doc.Text())
+	} else if field.Comment != nil {
+		f.Documentation = normalizeDoc(field.Comment.Text())
+	}
+	
 	return f, nil
 }
 
