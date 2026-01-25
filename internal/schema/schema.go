@@ -11,8 +11,8 @@ type Schema struct {
 	// Name is the struct name (e.g., "User")
 	Name string
 
-	// Package is the Go package path
-	PackagePath string
+	// PackageName is the Go package name (not import path)
+	PackageName string
 
 	// Fields are the struct fields with their validation rules
 	Fields []Field
@@ -220,7 +220,7 @@ func (p SourcePos) String() string {
 	if p.File == "" {
 		return ""
 	}
-	return p.File + ":" + string(rune(p.Line))
+	return p.File + ":" + intToString(p.Line)
 }
 
 // Validate checks if a Schema is semantically valid.
@@ -305,7 +305,7 @@ func (e *ValidationError) Error() string {
 	}
 
 	if e.Index != nil {
-		return prefix + ": " + e.Field + "[" + string(rune(*e.Index)) + "]: " + e.Message
+		return prefix + ": " + e.Field + "[" + intToString(*e.Index) + "]: " + e.Message
 	}
 	return prefix + ": " + e.Field + ": " + e.Message
 }
@@ -323,4 +323,26 @@ func indexOf(s, substr string) int {
 		}
 	}
 	return -1
+}
+
+func intToString(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	var buf [20]byte
+	i := len(buf) - 1
+	for n > 0 {
+		buf[i] = byte('0' + n%10)
+		n /= 10
+		i--
+	}
+	if neg {
+		buf[i] = '-'
+		i--
+	}
+	return string(buf[i+1:])
 }

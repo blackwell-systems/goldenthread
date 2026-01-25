@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/blackwell-systems/goldenthread/internal/schema"
@@ -144,7 +145,7 @@ func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string
 func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType, pkg, path string) *schema.Schema {
 	s := &schema.Schema{
 		Name:        typeSpec.Name.Name,
-		PackagePath: pkg,
+		PackageName: pkg,
 		Pos: schema.SourcePos{
 			File:   path,
 			Line:   fset.Position(typeSpec.Pos()).Line,
@@ -160,7 +161,7 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 	// Extract fields
 	for _, field := range structType.Fields.List {
 		for _, name := range field.Names {
-			f := p.extractField(field, name.Name)
+			f := p.extractField(fset, field, name.Name, path)
 			if f != nil {
 				s.Fields = append(s.Fields, *f)
 			}
@@ -171,7 +172,7 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 }
 
 // extractField converts an AST field to a schema Field.
-func (p *Parser) extractField(field *ast.Field, name string) *schema.Field {
+func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string, path string) *schema.Field {
 	if field.Tag == nil {
 		return nil
 	}
@@ -196,20 +197,34 @@ func (p *Parser) extractField(field *ast.Field, name string) *schema.Field {
 		return nil
 	}
 
+	pos := fset.Position(field.Pos())
 	f := &schema.Field{
 		GoName:   name,
 		JSONName: p.extractJSONName(tags),
 		Tags:     tags,
 		Pos: schema.SourcePos{
-			File:   "",
-			Line:   0,
-			Column: 0,
+			File:   path,
+			Line:   pos.Line,
+			Column: pos.Column,
 		},
 	}
 
 	// Parse validation rules from tag
 	f.Rules = p.parseRules(gtTag)
-	f.Optional = !p.isRequired(gtTag)
+
+	// Determine optional semantics:
+	// Default: required
+	// Optional if: pointer OR omitempty OR gt:"optional"
+	// gt:"required" overrides
+	isPtr := p.isPointer(field.Type)
+	omitEmpty := p.hasOmitEmpty(tags)
+	hasOptionalTag := p.containsToken(gtTag, "optional")
+	hasRequiredTag := p.containsToken(gtTag, "required")
+
+	f.Optional = isPtr || omitEmpty || hasOptionalTag
+	if hasRequiredTag {
+		f.Optional = false
+	}
 
 	// Extract type information
 	f.Type = p.extractType(field.Type)
@@ -227,6 +242,25 @@ func (p *Parser) extractType(expr ast.Expr) schema.Type {
 	switch t := expr.(type) {
 	case *ast.Ident:
 		return p.identToFieldType(t.Name)
+	case *ast.StarExpr:
+		// Pointer type - unwrap and extract the underlying type
+		return p.extractType(t.X)
+	case *ast.SelectorExpr:
+		// Handle package.Type (e.g., time.Time)
+		if ident, ok := t.X.(*ast.Ident); ok {
+			if ident.Name == "time" && t.Sel.Name == "Time" {
+				return schema.Type{Kind: schema.TypeTime}
+			}
+			// Other package-qualified types are named types
+			return schema.Type{
+				Kind: schema.TypeNamed,
+				Ref: &schema.TypeRef{
+					PackagePath: ident.Name,
+					Name:        t.Sel.Name,
+				},
+			}
+		}
+		return schema.Type{Kind: schema.TypeAny}
 	case *ast.ArrayType:
 		return schema.Type{
 			Kind: schema.TypeArray,
@@ -263,26 +297,27 @@ func (p *Parser) identToFieldType(name string) schema.Type {
 	}
 }
 
-// parseTags extracts all struct tags into a map.
-func (p *Parser) parseTags(tagString string) map[string]string {
-	// Remove backticks
-	tagString = strings.Trim(tagString, "`")
+// parseTags extracts struct tags using reflect.StructTag for correct parsing.
+func (p *Parser) parseTags(tagLit string) map[string]string {
+	tagLit = strings.Trim(tagLit, "`")
+	tag := reflect.StructTag(tagLit)
 
-	tags := make(map[string]string)
-	parts := strings.Fields(tagString)
+	out := make(map[string]string)
 
-	for _, part := range parts {
-		colonIdx := strings.Index(part, ":")
-		if colonIdx == -1 {
-			continue
+	// Extract only the tags we care about
+	if v, ok := tag.Lookup("json"); ok {
+		out["json"] = v
+	}
+	if v, ok := tag.Lookup(p.TagName); ok {
+		out[p.TagName] = v
+	}
+	for _, fallback := range p.FallbackTags {
+		if v, ok := tag.Lookup(fallback); ok {
+			out[fallback] = v
 		}
-
-		key := part[:colonIdx]
-		value := strings.Trim(part[colonIdx+1:], "\"")
-		tags[key] = value
 	}
 
-	return tags
+	return out
 }
 
 // extractJSONName gets the JSON field name from tags.
@@ -362,11 +397,32 @@ func (p *Parser) applyFlag(rules *schema.FieldRules, flag string) {
 	}
 }
 
-// isRequired checks if a field is marked as required.
-func (p *Parser) isRequired(tagValue string) bool {
+// containsToken checks if a tag value contains a specific token.
+func (p *Parser) containsToken(tagValue, token string) bool {
 	parts := strings.Split(tagValue, ",")
 	for _, part := range parts {
-		if strings.TrimSpace(part) == "required" {
+		if strings.TrimSpace(part) == token {
+			return true
+		}
+	}
+	return false
+}
+
+// isPointer checks if a field type is a pointer.
+func (p *Parser) isPointer(expr ast.Expr) bool {
+	_, ok := expr.(*ast.StarExpr)
+	return ok
+}
+
+// hasOmitEmpty checks if the json tag contains omitempty.
+func (p *Parser) hasOmitEmpty(tags map[string]string) bool {
+	jsonTag, ok := tags["json"]
+	if !ok {
+		return false
+	}
+	parts := strings.Split(jsonTag, ",")
+	for _, part := range parts {
+		if strings.TrimSpace(part) == "omitempty" {
 			return true
 		}
 	}

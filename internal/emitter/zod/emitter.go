@@ -95,6 +95,18 @@ func (e *Emitter) emitField(b *strings.Builder, field schema.Field, isLast bool)
 func (e *Emitter) emitType(b *strings.Builder, fieldType schema.Type, rules schema.FieldRules, required bool) {
 	switch fieldType.Kind {
 	case schema.TypeString:
+		// Handle enum specially - it's a top-level constructor
+		if rules.Enum != nil && len(rules.Enum) > 0 {
+			b.WriteString("z.enum([")
+			for i, val := range rules.Enum {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				b.WriteString("'" + val + "'")
+			}
+			b.WriteString("])")
+			return
+		}
 		b.WriteString("z.string()")
 		e.emitStringRules(b, rules)
 
@@ -158,16 +170,6 @@ func (e *Emitter) emitStringRules(b *strings.Builder, rules schema.FieldRules) {
 		pattern := strings.ReplaceAll(*rules.Pattern, "\\", "\\\\")
 		b.WriteString(fmt.Sprintf(".regex(/%s/)", pattern))
 	}
-	if rules.Enum != nil && len(rules.Enum) > 0 {
-		b.WriteString(".enum([")
-		for i, val := range rules.Enum {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString("'" + val + "'")
-		}
-		b.WriteString("])")
-	}
 	if rules.Format != nil {
 		switch *rules.Format {
 		case schema.FormatEmail:
@@ -177,7 +179,8 @@ func (e *Emitter) emitStringRules(b *strings.Builder, rules schema.FieldRules) {
 		case schema.FormatUUID:
 			b.WriteString(".uuid()")
 		case schema.FormatDate:
-			b.WriteString(".date()")
+			// ISO 8601 date format: YYYY-MM-DD
+			b.WriteString(".regex(/^\\\\d{4}-\\\\d{2}-\\\\d{2}$/)")
 		case schema.FormatDateTime:
 			b.WriteString(".datetime()")
 		case schema.FormatIPv4:
