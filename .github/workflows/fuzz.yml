@@ -2,8 +2,8 @@ name: Continuous Fuzzing
 
 on:
   schedule:
-    # Run fuzzing every hour
-    - cron: '0 * * * *'
+    # Run fuzzing every 30 minutes (maximum practical frequency)
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Allow manual triggering
   push:
     branches:
@@ -12,6 +12,12 @@ on:
       - 'internal/**/*.go'
       - 'cmd/**/*.go'
       - '.github/workflows/fuzz.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'internal/**/*.go'
+      - 'cmd/**/*.go'
 
 jobs:
   fuzz:
