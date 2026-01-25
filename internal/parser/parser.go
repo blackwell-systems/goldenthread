@@ -155,7 +155,7 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 
 	// Extract documentation
 	if typeSpec.Doc != nil {
-		s.Documentation = typeSpec.Doc.Text()
+		s.Documentation = normalizeDoc(typeSpec.Doc.Text())
 	}
 
 	// Extract fields
@@ -261,9 +261,11 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 	// Extract type information
 	f.Type = p.extractType(field.Type)
 
-	// Extract documentation
+	// Extract documentation (prefer Doc, fallback to Comment)
 	if field.Doc != nil {
-		f.Documentation = field.Doc.Text()
+		f.Documentation = normalizeDoc(field.Doc.Text())
+	} else if field.Comment != nil {
+		f.Documentation = normalizeDoc(field.Comment.Text())
 	}
 
 	return f, nil
@@ -603,6 +605,17 @@ func (p *Parser) hasRelevantTag(tagString string) bool {
 }
 
 // Helper functions
+
+// normalizeDoc normalizes documentation strings for consistent output.
+func normalizeDoc(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	// Text() from ast already removes // and /* markers
+	// Just normalize whitespace
+	return s
+}
 
 func parseInt(s string) *int {
 	var i int
