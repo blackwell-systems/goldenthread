@@ -44,12 +44,6 @@ func FuzzEmit(f *testing.F) {
 			return
 		}
 
-		// Known issue: Empty JSON names with non-ASCII schema names can produce invalid UTF-8
-		// Skip these cases for now
-		if fieldJSONName == "" && (!isASCII(schemaName) || !isASCII(fieldGoName)) {
-			t.Skip("Known issue: empty JSON name with non-ASCII characters")
-		}
-
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("Emit panicked on schema=%q field=%q json=%q: %v", 
