@@ -83,6 +83,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Cross-package support when types in registry
   - Example: `type User struct { Base; Username string }` promotes Base fields into User schema
 
+- **First-class collision detection** (must-have for v0.1)
+  - JSON name collision detection across all fields (including embedded)
+  - Go field name collision detection during parsing
+  - Runs validation before and after embedded struct flattening
+  - Clear error messages showing both conflicting fields with positions
+  - Prevents silently generating invalid APIs with duplicate keys
+  - Example: `UserID` and `UserId` both mapping to `"userId"` → compile error
+
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
   - Parsing table with IR mappings

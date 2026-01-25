@@ -133,9 +133,19 @@ func generate(args []string) error {
 	
 	fmt.Printf("Found %d schema(s)\n", len(schemas))
 	
+	// Validate Go field names before flattening
+	if err := normalize.ValidateGoNames(schemas); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Flatten embedded structs
 	if err := normalize.FlattenEmbedded(schemas); err != nil {
 		return fmt.Errorf("failed to flatten embedded structs: %w", err)
+	}
+	
+	// Validate JSON names after flattening (catches collisions from embedded fields)
+	if err := normalize.ValidateJSONNames(schemas); err != nil {
+		return fmt.Errorf("validation error: %w", err)
 	}
 	
 	// Create output directory
@@ -242,9 +252,19 @@ func check(args []string) error {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
 	
+	// Validate Go field names before flattening
+	if err := normalize.ValidateGoNames(schemas); err != nil {
+		return fmt.Errorf("validation error: %w", err)
+	}
+	
 	// Flatten embedded structs
 	if err := normalize.FlattenEmbedded(schemas); err != nil {
 		return fmt.Errorf("failed to flatten embedded structs: %w", err)
+	}
+	
+	// Validate JSON names after flattening
+	if err := normalize.ValidateJSONNames(schemas); err != nil {
+		return fmt.Errorf("validation error: %w", err)
 	}
 	
 	// Compare schemas
