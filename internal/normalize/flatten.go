@@ -10,7 +10,6 @@ import (
 	"github.com/blackwell-systems/goldenthread/internal/schema"
 )
 
-
 // SchemaRegistry holds all parsed schemas for cross-reference resolution.
 type SchemaRegistry struct {
 	// schemas maps (PackageQualifier, Name) to Schema
@@ -57,26 +56,26 @@ func makeKey(pkg, name string) string {
 // This must be called after all schemas are parsed and added to the registry.
 func FlattenEmbedded(schemas []*schema.Schema) error {
 	registry := NewRegistry()
-	
+
 	// First pass: add all schemas to registry
 	for _, s := range schemas {
 		registry.Add(s)
 	}
-	
+
 	// Second pass: flatten embedded fields
 	for _, s := range schemas {
 		if err := flattenSchemaWithContext(s, s.PackageName, registry, make(map[string]bool)); err != nil {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
 // flattenSchemaWithContext flattens embedded fields with package context.
 func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *SchemaRegistry, visiting map[string]bool) error {
 	key := makeKey(s.PackageName, s.Name)
-	
+
 	// Detect cycles
 	if visiting[key] {
 		return &schema.ValidationError{
@@ -84,14 +83,14 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 			Pos:     s.Pos,
 		}
 	}
-	
+
 	visiting[key] = true
 	defer delete(visiting, key)
-	
+
 	// Track field names for collision detection
 	fieldNames := make(map[string]schema.SourcePos)
 	var newFields []schema.Field
-	
+
 	for _, field := range s.Fields {
 		if field.Embedded && field.EmbeddedType != nil {
 			// Look up the embedded schema
@@ -104,7 +103,7 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 					Name:             ref.Name,
 				}
 			}
-			
+
 			embeddedSchema := registry.Lookup(ref)
 			if embeddedSchema == nil {
 				// Can't resolve embedded type - skip flattening
@@ -112,19 +111,19 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 				newFields = append(newFields, field)
 				continue
 			}
-			
+
 			// Recursively flatten the embedded schema first
 			if err := flattenSchemaWithContext(embeddedSchema, currentPkg, registry, visiting); err != nil {
 				return err
 			}
-			
+
 			// Promote embedded schema's fields
 			for _, embeddedField := range embeddedSchema.Fields {
 				// Skip embedded fields that are themselves embedded (already flattened)
 				if embeddedField.Embedded {
 					continue
 				}
-				
+
 				// Check for collisions
 				if prevPos, exists := fieldNames[embeddedField.GoName]; exists {
 					return &schema.ValidationError{
@@ -133,7 +132,7 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 						Pos:     field.Pos,
 					}
 				}
-				
+
 				// Also check JSON name collisions
 				if embeddedField.JSONName != "" {
 					for _, existing := range newFields {
@@ -146,11 +145,11 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 						}
 					}
 				}
-				
+
 				// Promote the field
 				promotedField := embeddedField
 				// Note: we keep the field's original documentation and tags
-				
+
 				newFields = append(newFields, promotedField)
 				fieldNames[promotedField.GoName] = promotedField.Pos
 			}
@@ -163,14 +162,14 @@ func flattenSchemaWithContext(s *schema.Schema, currentPkg string, registry *Sch
 					Pos:     field.Pos,
 				}
 			}
-			
+
 			newFields = append(newFields, field)
 			fieldNames[field.GoName] = field.Pos
 		}
 	}
-	
+
 	// Replace fields with flattened version
 	s.Fields = newFields
-	
+
 	return nil
 }

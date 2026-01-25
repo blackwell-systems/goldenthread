@@ -29,8 +29,8 @@ func FuzzParsePackages(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, structName, fieldName, jsonName, gtTag string) {
 		// Skip invalid UTF-8
-		if !utf8.ValidString(structName) || !utf8.ValidString(fieldName) || 
-		   !utf8.ValidString(jsonName) || !utf8.ValidString(gtTag) {
+		if !utf8.ValidString(structName) || !utf8.ValidString(fieldName) ||
+			!utf8.ValidString(jsonName) || !utf8.ValidString(gtTag) {
 			return
 		}
 
@@ -60,14 +60,14 @@ func FuzzParsePackages(f *testing.F) {
 
 		// Create temporary test module
 		tmpDir := t.TempDir()
-		
+
 		goMod := filepath.Join(tmpDir, "go.mod")
 		if err := os.WriteFile(goMod, []byte("module fuzztest\n\ngo 1.23\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
 
 		// Generate Go code
-		code := "package fuzztest\n\ntype " + structName + " struct {\n\t" + 
+		code := "package fuzztest\n\ntype " + structName + " struct {\n\t" +
 			fieldName + " string `json:\"" + jsonName + "\" " + gtTag + "`\n}\n"
 
 		testFile := filepath.Join(tmpDir, "test.go")
@@ -117,7 +117,7 @@ func FuzzNormalizeDoc(f *testing.F) {
 		// Call via integration since normalizeDoc is not exported
 		// Just verify parser doesn't panic with various doc strings
 		tmpDir := t.TempDir()
-		
+
 		goMod := filepath.Join(tmpDir, "go.mod")
 		os.WriteFile(goMod, []byte("module test\n\ngo 1.23\n"), 0644)
 

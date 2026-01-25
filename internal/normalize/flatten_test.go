@@ -214,7 +214,7 @@ func TestFlattenEmbedded_GoNameCollision(t *testing.T) {
 
 	schemas := []*schema.Schema{base, user}
 	err := normalize.FlattenEmbedded(schemas)
-	
+
 	// Should error due to field name collision
 	if err == nil {
 		t.Fatal("Expected error for field name collision, got nil")
@@ -260,7 +260,7 @@ func TestFlattenEmbedded_JSONNameCollision(t *testing.T) {
 
 	schemas := []*schema.Schema{base, user}
 	err := normalize.FlattenEmbedded(schemas)
-	
+
 	// Should error due to JSON name collision
 	if err == nil {
 		t.Fatal("Expected error for JSON name collision, got nil")
@@ -304,7 +304,7 @@ func TestFlattenEmbedded_CycleDetection(t *testing.T) {
 
 	schemas := []*schema.Schema{schemaA, schemaB}
 	err := normalize.FlattenEmbedded(schemas)
-	
+
 	// Should error due to cycle
 	if err == nil {
 		t.Fatal("Expected error for cycle detection, got nil")

@@ -22,8 +22,8 @@ func FuzzComputeSchemaHash(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, schemaName, pkgName, fieldGoName, fieldJSONName string) {
 		// Skip invalid UTF-8
-		if !utf8.ValidString(schemaName) || !utf8.ValidString(pkgName) || 
-		   !utf8.ValidString(fieldGoName) || !utf8.ValidString(fieldJSONName) {
+		if !utf8.ValidString(schemaName) || !utf8.ValidString(pkgName) ||
+			!utf8.ValidString(fieldGoName) || !utf8.ValidString(fieldJSONName) {
 			return
 		}
 
@@ -83,8 +83,8 @@ func FuzzComputeSchemaHash_Stability(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, name, doc1, file1, doc2, file2 string) {
 		// Skip invalid UTF-8
-		if !utf8.ValidString(name) || !utf8.ValidString(doc1) || 
-		   !utf8.ValidString(file1) || !utf8.ValidString(doc2) || !utf8.ValidString(file2) {
+		if !utf8.ValidString(name) || !utf8.ValidString(doc1) ||
+			!utf8.ValidString(file1) || !utf8.ValidString(doc2) || !utf8.ValidString(file2) {
 			return
 		}
 
@@ -207,7 +207,7 @@ func FuzzComputeSchemaHash_FieldOrder(f *testing.F) {
 	f.Fuzz(func(t *testing.T, go1, go2, json1, json2 string) {
 		// Skip invalid UTF-8
 		if !utf8.ValidString(go1) || !utf8.ValidString(go2) ||
-		   !utf8.ValidString(json1) || !utf8.ValidString(json2) {
+			!utf8.ValidString(json1) || !utf8.ValidString(json2) {
 			return
 		}
 

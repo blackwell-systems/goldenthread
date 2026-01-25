@@ -26,61 +26,61 @@ type hash256 interface {
 // - Does NOT include documentation or source positions
 func ComputeSchemaHash(s *schema.Schema) string {
 	h := sha256.New()
-	
+
 	// Schema name and package
 	h.Write([]byte(s.Name))
 	h.Write([]byte(s.PackageName))
-	
+
 	// Sort fields by name for deterministic output
 	fields := make([]schema.Field, len(s.Fields))
 	copy(fields, s.Fields)
 	sort.Slice(fields, func(i, j int) bool {
 		return fields[i].GoName < fields[j].GoName
 	})
-	
+
 	// Hash each field
 	for _, field := range fields {
 		h.Write([]byte(field.GoName))
 		h.Write([]byte(field.JSONName))
-		
+
 		// Type information
 		writeType(h, field.Type)
-		
+
 		// Optional flag
 		if field.Optional {
 			h.Write([]byte("optional"))
 		} else {
 			h.Write([]byte("required"))
 		}
-		
+
 		// Rules
 		writeRules(h, field.Rules)
 	}
-	
+
 	return hex.EncodeToString(h.Sum(nil))
 }
 
 // writeType writes type information to the hash.
 func writeType(h hash256, t schema.Type) {
 	h.Write([]byte(t.Kind.String()))
-	
+
 	if t.Ref != nil {
 		h.Write([]byte(t.Ref.PackageQualifier))
 		h.Write([]byte(t.Ref.Name))
 	}
-	
+
 	if t.Elem != nil {
 		writeType(h, *t.Elem)
 	}
-	
+
 	if t.Key != nil {
 		writeType(h, *t.Key)
 	}
-	
+
 	if t.Value != nil {
 		writeType(h, *t.Value)
 	}
-	
+
 	// Hash inline object fields
 	for _, field := range t.Fields {
 		h.Write([]byte(field.GoName))
@@ -155,17 +155,17 @@ func floatToString(f float64) string {
 	if f == 0 {
 		return "0"
 	}
-	
+
 	// Manual bit conversion
 	sign := uint64(0)
 	if f < 0 {
 		sign = 1
 		f = -f
 	}
-	
+
 	// For hashing purposes, simple representation is fine
 	intPart := int(f)
 	fracPart := int((f - float64(intPart)) * 1000000)
-	
+
 	return intToString(int(sign)) + ":" + intToString(intPart) + "." + intToString(fracPart)
 }

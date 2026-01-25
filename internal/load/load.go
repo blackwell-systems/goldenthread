@@ -16,7 +16,7 @@ import (
 type Package struct {
 	// Pkg is the loaded package
 	Pkg *packages.Package
-	
+
 	// Fset is the file set for position information
 	Fset *token.FileSet
 }
@@ -43,12 +43,12 @@ func LoadPackagesWithDir(dir string, patterns ...string) ([]*Package, error) {
 		Tests: false,
 		Dir:   dir,
 	}
-	
+
 	pkgs, err := packages.Load(cfg, patterns...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load packages: %w", err)
 	}
-	
+
 	// Check for errors in loaded packages
 	var errs []error
 	for _, pkg := range pkgs {
@@ -58,11 +58,11 @@ func LoadPackagesWithDir(dir string, patterns ...string) ([]*Package, error) {
 			}
 		}
 	}
-	
+
 	if len(errs) > 0 {
 		return nil, fmt.Errorf("package loading errors: %v", errs)
 	}
-	
+
 	// Convert to our Package type
 	result := make([]*Package, 0, len(pkgs))
 	for _, pkg := range pkgs {
@@ -71,7 +71,7 @@ func LoadPackagesWithDir(dir string, patterns ...string) ([]*Package, error) {
 			Fset: pkg.Fset,
 		})
 	}
-	
+
 	return result, nil
 }
 
@@ -79,7 +79,7 @@ func LoadPackagesWithDir(dir string, patterns ...string) ([]*Package, error) {
 type TypeInfo struct {
 	// TypesInfo from go/packages
 	Info *types.Info
-	
+
 	// Package for scope resolution
 	Pkg *types.Package
 }

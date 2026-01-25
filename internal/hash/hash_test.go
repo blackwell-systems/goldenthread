@@ -39,7 +39,7 @@ func TestComputeSchemaHash_Deterministic(t *testing.T) {
 	if hash1 != hash2 || hash2 != hash3 {
 		t.Errorf("Hashes not deterministic: %q, %q, %q", hash1, hash2, hash3)
 	}
-	
+
 	// Should be 64 hex characters (SHA-256)
 	if len(hash1) != 64 {
 		t.Errorf("Expected 64-char hash, got %d", len(hash1))

@@ -15,7 +15,7 @@ import (
 type Metadata struct {
 	// Version of goldenthread used to generate
 	Version string `json:"version"`
-	
+
 	// Schemas maps schema name to its hash
 	Schemas map[string]SchemaMetadata `json:"schemas"`
 }
@@ -24,10 +24,10 @@ type Metadata struct {
 type SchemaMetadata struct {
 	// Hash of the schema content
 	Hash string `json:"hash"`
-	
+
 	// SourceFile is the Go source file
 	SourceFile string `json:"source_file"`
-	
+
 	// OutputFile is the generated output file
 	OutputFile string `json:"output_file"`
 }
@@ -40,7 +40,7 @@ func WriteMetadata(outDir string, schemas []*schema.Schema, version string) erro
 		Version: version,
 		Schemas: make(map[string]SchemaMetadata),
 	}
-	
+
 	for _, s := range schemas {
 		hash := ComputeSchemaHash(s)
 		md.Schemas[s.Name] = SchemaMetadata{
@@ -49,12 +49,12 @@ func WriteMetadata(outDir string, schemas []*schema.Schema, version string) erro
 			OutputFile: toKebabCase(s.Name) + ".ts",
 		}
 	}
-	
+
 	data, err := json.MarshalIndent(md, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	metadataPath := filepath.Join(outDir, metadataFilename)
 	return os.WriteFile(metadataPath, data, 0644)
 }
@@ -62,17 +62,17 @@ func WriteMetadata(outDir string, schemas []*schema.Schema, version string) erro
 // ReadMetadata reads metadata from the output directory.
 func ReadMetadata(outDir string) (*Metadata, error) {
 	metadataPath := filepath.Join(outDir, metadataFilename)
-	
+
 	data, err := os.ReadFile(metadataPath)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var md Metadata
 	if err := json.Unmarshal(data, &md); err != nil {
 		return nil, err
 	}
-	
+
 	return &md, nil
 }
 
@@ -81,7 +81,7 @@ func toKebabCase(s string) string {
 	if s == "" {
 		return ""
 	}
-	
+
 	var result []rune
 	for i, r := range s {
 		if i > 0 && r >= 'A' && r <= 'Z' {
@@ -93,6 +93,6 @@ func toKebabCase(s string) string {
 			result = append(result, r)
 		}
 	}
-	
+
 	return string(result)
 }

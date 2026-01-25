@@ -81,119 +81,119 @@ func generate(args []string) error {
 	outDir := fs.String("out", "./gen", "output directory for generated files")
 	target := fs.String("target", "zod", "generation target (zod, typescript, openapi)")
 	recursive := fs.Bool("recursive", false, "recursively process subdirectories")
-	
+
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: goldenthread generate [options] <directory>\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	
+
 	if fs.NArg() == 0 {
 		return fmt.Errorf("generate requires a directory argument")
 	}
-	
+
 	inputDir := fs.Arg(0)
-	
+
 	fmt.Printf("goldenthread - generating schemas\n")
 	fmt.Printf("  Source: %s\n", inputDir)
 	fmt.Printf("  Output: %s\n", *outDir)
 	fmt.Printf("  Target: %s\n", *target)
 	fmt.Println()
-	
+
 	// Only support zod for v0.1
 	if *target != "zod" {
 		return fmt.Errorf("only 'zod' target is supported in v0.1")
 	}
-	
+
 	// Use go/packages for proper type resolution
 	pattern := inputDir
 	if *recursive {
 		pattern = inputDir + "/..."
 	}
-	
+
 	pkgs, err := load.LoadPackages(pattern)
 	if err != nil {
 		return fmt.Errorf("failed to load packages: %w", err)
 	}
-	
+
 	p := parser.NewParser()
 	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
-	
+
 	if len(schemas) == 0 {
 		fmt.Println("No schemas found with gt: tags")
 		return nil
 	}
-	
+
 	fmt.Printf("Found %d schema(s)\n", len(schemas))
-	
+
 	// Validate Go field names before flattening
 	if err := normalize.ValidateGoNames(schemas); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
-	
+
 	// Flatten embedded structs
 	if err := normalize.FlattenEmbedded(schemas); err != nil {
 		return fmt.Errorf("failed to flatten embedded structs: %w", err)
 	}
-	
+
 	// Validate JSON names after flattening (catches collisions from embedded fields)
 	if err := normalize.ValidateJSONNames(schemas); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
-	
+
 	// Create output directory
 	if err := os.MkdirAll(*outDir, 0755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
-	
+
 	// Generate schemas
 	emitter := zod.NewEmitter()
 	successCount := 0
-	
+
 	for _, schema := range schemas {
 		fmt.Printf("  Generating %s...\n", schema.Name)
-		
+
 		// Validate schema
 		if err := schema.Validate(); err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: skipping %s: %v\n", schema.Name, err)
 			continue
 		}
-		
+
 		// Generate Zod schema
 		output, err := emitter.Emit(schema)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: failed to emit %s: %v\n", schema.Name, err)
 			continue
 		}
-		
+
 		// Write to file
 		outFile := filepath.Join(*outDir, toKebabCase(schema.Name)+".ts")
 		if err := os.WriteFile(outFile, []byte(output), 0644); err != nil {
 			fmt.Fprintf(os.Stderr, "  Warning: failed to write %s: %v\n", outFile, err)
 			continue
 		}
-		
+
 		successCount++
 	}
-	
+
 	fmt.Printf("\nGenerated %d/%d schemas successfully\n", successCount, len(schemas))
-	
+
 	if successCount < len(schemas) {
 		return fmt.Errorf("some schemas failed to generate")
 	}
-	
+
 	// Write metadata for drift detection
 	if err := hash.WriteMetadata(*outDir, schemas, "0.1.0"); err != nil {
 		return fmt.Errorf("failed to write metadata: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -202,28 +202,28 @@ func check(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	outDir := fs.String("out", "./gen", "output directory to check")
 	recursive := fs.Bool("recursive", false, "recursively process subdirectories")
-	
+
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: goldenthread check [options] <directory>\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		fs.PrintDefaults()
 	}
-	
+
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	
+
 	if fs.NArg() == 0 {
 		return fmt.Errorf("check requires a directory argument")
 	}
-	
+
 	inputDir := fs.Arg(0)
-	
+
 	fmt.Printf("goldenthread - checking schemas\n")
 	fmt.Printf("  Source: %s\n", inputDir)
 	fmt.Printf("  Output: %s\n", *outDir)
 	fmt.Println()
-	
+
 	// Read existing metadata
 	metadata, err := hash.ReadMetadata(*outDir)
 	if err != nil {
@@ -232,53 +232,53 @@ func check(args []string) error {
 		}
 		return fmt.Errorf("failed to read metadata: %w", err)
 	}
-	
+
 	fmt.Printf("Checking against metadata (version: %s)\n", metadata.Version)
-	
+
 	// Use go/packages for proper type resolution
 	pattern := inputDir
 	if *recursive {
 		pattern = inputDir + "/..."
 	}
-	
+
 	pkgs, err := load.LoadPackages(pattern)
 	if err != nil {
 		return fmt.Errorf("failed to load packages: %w", err)
 	}
-	
+
 	p := parser.NewParser()
 	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
-	
+
 	// Validate Go field names before flattening
 	if err := normalize.ValidateGoNames(schemas); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
-	
+
 	// Flatten embedded structs
 	if err := normalize.FlattenEmbedded(schemas); err != nil {
 		return fmt.Errorf("failed to flatten embedded structs: %w", err)
 	}
-	
+
 	// Validate JSON names after flattening
 	if err := normalize.ValidateJSONNames(schemas); err != nil {
 		return fmt.Errorf("validation error: %w", err)
 	}
-	
+
 	// Compare schemas
 	var drifted []string
 	var added []string
 	var removed []string
-	
+
 	// Track which metadata schemas we've seen
 	seen := make(map[string]bool)
-	
+
 	for _, s := range schemas {
 		seen[s.Name] = true
 		currentHash := hash.ComputeSchemaHash(s)
-		
+
 		if storedMeta, exists := metadata.Schemas[s.Name]; exists {
 			if storedMeta.Hash != currentHash {
 				drifted = append(drifted, s.Name)
@@ -291,7 +291,7 @@ func check(args []string) error {
 			fmt.Printf("  + %s - new schema (not in metadata)\n", s.Name)
 		}
 	}
-	
+
 	// Check for removed schemas
 	for name := range metadata.Schemas {
 		if !seen[name] {
@@ -299,9 +299,9 @@ func check(args []string) error {
 			fmt.Printf("  - %s - schema removed from source\n", name)
 		}
 	}
-	
+
 	fmt.Println()
-	
+
 	// Report results
 	if len(drifted) > 0 || len(added) > 0 || len(removed) > 0 {
 		fmt.Printf("Schemas out of sync:\n")
@@ -317,7 +317,7 @@ func check(args []string) error {
 		fmt.Println("\nRun 'goldenthread generate' to update generated schemas")
 		return fmt.Errorf("schemas are out of sync")
 	}
-	
+
 	fmt.Printf("All schemas are up to date (%d checked)\n", len(schemas))
 	return nil
 }
@@ -333,7 +333,7 @@ func toKebabCase(s string) string {
 	if s == "" {
 		return ""
 	}
-	
+
 	var result []rune
 	for i, r := range s {
 		if i > 0 && r >= 'A' && r <= 'Z' {
@@ -345,6 +345,6 @@ func toKebabCase(s string) string {
 			result = append(result, r)
 		}
 	}
-	
+
 	return string(result)
 }
