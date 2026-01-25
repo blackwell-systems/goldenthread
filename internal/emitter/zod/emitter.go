@@ -123,6 +123,26 @@ func (e *Emitter) emitType(b *strings.Builder, fieldType schema.Type, rules sche
 		b.WriteString(")")
 		e.emitArrayRules(b, rules)
 
+	case schema.TypeMap:
+		b.WriteString("z.record(")
+		// Emit key type (Zod record requires string keys)
+		if fieldType.Key != nil && fieldType.Key.Kind == schema.TypeString {
+			b.WriteString("z.string(), ")
+		} else if fieldType.Key != nil {
+			// Non-string keys - emit anyway but note limitation
+			e.emitType(b, *fieldType.Key, schema.FieldRules{}, true)
+			b.WriteString(", ")
+		} else {
+			b.WriteString("z.string(), ")
+		}
+		// Emit value type
+		if fieldType.Value != nil {
+			e.emitType(b, *fieldType.Value, schema.FieldRules{}, true)
+		} else {
+			b.WriteString("z.any()")
+		}
+		b.WriteString(")")
+
 	case schema.TypeObject:
 		b.WriteString("z.object({\n")
 		for i, prop := range fieldType.Fields {

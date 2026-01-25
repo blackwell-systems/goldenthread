@@ -91,6 +91,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Prevents silently generating invalid APIs with duplicate keys
   - Example: `UserID` and `UserId` both mapping to `"userId"` → compile error
 
+- **Map type support**
+  - Full support for Go maps: `map[K]V` → `z.record(K, V)`
+  - Works with any key and value types (string keys, struct values, nested maps)
+  - Automatically handled in type resolution and emission
+  - Example: `map[string][]User` → `z.record(z.string(), z.array(UserSchema))`
+
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
   - Parsing table with IR mappings
