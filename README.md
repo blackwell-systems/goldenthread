@@ -2,6 +2,13 @@
 
 > The golden thread of truth that runs through your system.
 
+[![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems) 
+[![Go Reference](https://pkg.go.dev/badge/github.com/blackwell-systems/goldenthread.svg)](https://pkg.go.dev/github.com/blackwell-systems/goldenthread) 
+[![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://go.dev/) 
+
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
+[![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
+
 **goldenthread** is a schema compiler for Go that maintains a single source of truth across your entire stack. Define your domain models once in Go, and compile them into validation, types, and APIs everywhere else.
 
 ## The Problem
