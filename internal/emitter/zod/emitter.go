@@ -92,7 +92,7 @@ func (e *Emitter) emitType(b *strings.Builder, fieldType schema.Type, rules sche
 	switch fieldType.Kind {
 	case schema.TypeString:
 		// Handle enum specially - it's a top-level constructor
-		if rules.Enum != nil && len(rules.Enum) > 0 {
+		if len(rules.Enum) > 0 {
 			b.WriteString("z.enum([")
 			for i, val := range rules.Enum {
 				if i > 0 {

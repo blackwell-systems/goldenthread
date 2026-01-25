@@ -14,14 +14,16 @@ linters:
     - gofmt         # Check formatting
     - goimports     # Check imports formatting
     - misspell      # Find commonly misspelled words
-    - revive        # Fast, configurable, extensible linter
     - typecheck     # Type-check Go code
     - bodyclose     # Check HTTP response body is closed
-    - errorlint     # Find code that causes problems with error wrapping
-    - gocritic      # Comprehensive Go source code linter
     - nilerr        # Find code returning nil even if error checks fail
-    - predeclared   # Find code that shadows predeclared identifiers
     - whitespace    # Check for unnecessary whitespace
+  
+  disable:
+    - revive        # Too many style opinions for v0.1
+    - errorlint     # Type assertions are intentional
+    - gocritic      # Too pedantic for initial release
+    - predeclared   # Variable names like min/max are fine
 
 linters-settings:
   errcheck:
@@ -31,7 +33,8 @@ linters-settings:
   govet:
     enable-all: true
     disable:
-      - shadow  # Can be noisy
+      - shadow        # Can be noisy
+      - fieldalignment  # Micro-optimization not worth code churn
   
   staticcheck:
     checks: ["all"]
