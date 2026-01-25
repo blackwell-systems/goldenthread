@@ -2,8 +2,8 @@ name: Continuous Fuzzing
 
 on:
   schedule:
-    # Run fuzzing every 6 hours
-    - cron: '0 */6 * * *'
+    # Run fuzzing every hour
+    - cron: '0 * * * *'
   workflow_dispatch: # Allow manual triggering
   push:
     branches:
