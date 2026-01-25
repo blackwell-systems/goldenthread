@@ -1,4 +1,4 @@
-// Copyright 2025 Blackwell Systems
+// Copyright 2025 Dayna Blackwell / Blackwell Systems
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
 // goldenthread CLI tool
