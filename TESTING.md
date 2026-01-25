@@ -132,7 +132,7 @@ go test ./internal/emitter/zod -run=FuzzEmit/89831cc049267b2c
 
 **Workflow**: `.github/workflows/fuzz.yml`
 
-**Schedule**: Every hour + on every push to main
+**Schedule**: Every 30 minutes + on every push to main + on every PR
 
 **Strategy**: 
 - Runs 10 fuzz targets in parallel
@@ -165,9 +165,9 @@ Continuous fuzzing is fundamentally different from one-time testing. Here's why 
 **3. Time Advantage**
 - Humans write ~10-20 test cases per feature
 - Fuzzer executes 100K-1M cases per minute
-- In 1 hour of CI: ~6M-60M test cases executed
-- Per day: 144M-1.4B test cases (24 runs)
-- Per month: 4.3B-43B test cases
+- Per CI run: ~20M-40M test cases executed (10 minutes)
+- Per day: 960M-1.9B test cases (48 runs every 30 minutes)
+- Per month: 28.8B-57.6B test cases
 
 **4. Zero Maintenance**
 - No test cases to write for new code paths
@@ -200,16 +200,24 @@ Continuous fuzzing is fundamentally different from one-time testing. Here's why 
 1. **Corpus growth**: Each run discovers new interesting inputs and caches them
 2. **Regression prevention**: Finds bugs in new code before merging to main
 3. **Coverage expansion**: Explores code paths developers never consider
-4. **Zero developer effort**: Runs automatically every hour, 24x per day
+4. **Zero developer effort**: Runs automatically every 30 minutes, 48x per day
 5. **Compound returns**: Gets more effective over time as corpus grows
-6. **Bug discovery timeline**: Finds bugs in hours instead of months/years in production
+6. **Bug discovery timeline**: Finds bugs in minutes-hours instead of months/years in production
+7. **PR validation**: Runs on every pull request before merge
 
-**Why hourly intervals?**:
-- Maximum bug discovery speed (< 1-2 hour latency)
-- Frequent corpus updates accelerate coverage growth
-- Still GitHub Actions friendly (~10 minutes compute per run)
-- Catches bugs immediately after code changes
-- 24 runs/day = 24x more exploration than daily fuzzing
+**Why 30-minute intervals?**:
+- Aggressive bug discovery (< 30 minute latency from code change)
+- Rapid corpus growth from frequent updates
+- Free for open source on GitHub Actions
+- Catches bugs before developers even switch tasks
+- 48 runs/day = maximum practical fuzzing frequency
+- Each run completes in ~10 minutes (parallel execution)
+
+**GitHub Actions Limits** (for public repositories):
+- Concurrent jobs: 20 (we use 10 per run)
+- Minutes per month: Unlimited for public repos
+- Storage: 500MB artifacts (we cache small corpus files)
+- Perfect fit for aggressive fuzzing strategy
 
 **Alternative: OSS-Fuzz**:
 For even more coverage, consider integrating with [OSS-Fuzz](https://github.com/google/oss-fuzz):
