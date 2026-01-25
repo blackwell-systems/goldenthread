@@ -46,11 +46,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **CLI tool**
   - `goldenthread generate` command with flag parsing
-  - `--out` flag for output directory (default: `./gen`)
-  - `--target` flag for generation target (zod only in v0.1)
-  - `--recursive` flag for subdirectory processing
-  - Progress reporting and success/failure summary
-  - Kebab-case filename generation (User → user.ts)
+    - `--out` flag for output directory (default: `./gen`)
+    - `--target` flag for generation target (zod only in v0.1)
+    - `--recursive` flag for subdirectory processing
+    - Progress reporting and success/failure summary
+    - Kebab-case filename generation (User → user.ts)
+    - Automatic metadata generation for drift detection
+  - `goldenthread check` command with drift detection
+    - Hash-based schema comparison
+    - Detects changed, added, and removed schemas
+    - Clear visual output (✓ up to date, ✗ changed, + added, - removed)
+    - Exit code 1 if out of sync (CI-friendly)
+    - Reads `.goldenthread.json` metadata file
+
+- **Hash-based drift detection**
+  - Deterministic SHA-256 hashing of schema content
+  - Metadata file (`.goldenthread.json`) tracking
+  - Version tracking in metadata
+  - Excludes documentation and positions for stable hashes
+  - Sorted fields and enum values for deterministic output
 
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
