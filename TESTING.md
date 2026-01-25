@@ -140,25 +140,83 @@ go test ./internal/emitter/zod -run=FuzzEmit/89831cc049267b2c
 - Total: ~50-100 minutes of fuzzing per run
 - Corpus is cached and grows over time
 
+**Why This Approach Works**:
+
+Continuous fuzzing is fundamentally different from one-time testing. Here's why it's effective:
+
+**1. Corpus Evolution**
+- Each run adds "interesting" inputs to the corpus (inputs that increase coverage)
+- Next run uses previous corpus as starting point + explores new mutations
+- Over weeks/months, corpus becomes highly optimized for finding bugs
+- Like compound interest: each run builds on all previous runs
+
+**Example progression**:
+- Week 1: Discovers basic edge cases (empty strings, max values)
+- Week 2: Mutates edge cases, finds combinations (empty + special chars)
+- Week 3: Deeper mutations find rare paths (nested edge cases)
+- Month 3: Corpus has 1000s of interesting cases covering obscure paths
+
+**2. Coverage-Guided Exploration**
+- Go's fuzzer instruments code to track which branches execute
+- Prioritizes inputs that explore new code paths
+- Automatically finds rare conditions (e.g., "if len == 42 && first_char == '🎉'")
+- No human could think of these combinations
+
+**3. Time Advantage**
+- Humans write ~10-20 test cases per feature
+- Fuzzer executes 100K-1M cases per minute
+- In 6 hours of CI: ~36M-360M test cases executed
+- Per day: 144M-1.4B test cases
+- Per month: 4.3B-43B test cases
+
+**4. Zero Maintenance**
+- No test cases to write for new code paths
+- Automatically explores new features added to codebase
+- Corpus naturally adapts to code changes
+- Only action needed: fix bugs when found
+
+**Real Results from goldenthread**:
+- **180 executions** to find regex escaping bug (< 1 second)
+- **444,553 executions** to find UTF-8 camelCase bug (< 10 seconds)
+- Traditional testing would never find these (who tests newlines in regex patterns?)
+
 **Execution matrix**:
-| Package | Target | Duration |
-|---------|--------|----------|
-| emitter/zod | FuzzEmit | 10m |
-| emitter/zod | FuzzEmitPattern | 10m |
-| emitter/zod | FuzzEmitFieldName | 5m |
-| emitter/zod | FuzzEmitValidation | 5m |
-| emitter/zod | FuzzEmitEnum | 5m |
-| hash | FuzzComputeSchemaHash | 10m |
-| hash | FuzzComputeSchemaHash_Stability | 5m |
-| hash | FuzzComputeSchemaHash_TypeChanges | 5m |
-| hash | FuzzComputeSchemaHash_FieldOrder | 5m |
-| parser | FuzzParsePackages | 5m |
+| Package | Target | Duration | Execs/Run (est) |
+|---------|--------|----------|-----------------|
+| emitter/zod | FuzzEmit | 10m | ~2-5M |
+| emitter/zod | FuzzEmitPattern | 10m | ~500K-1M |
+| emitter/zod | FuzzEmitFieldName | 5m | ~1-2M |
+| emitter/zod | FuzzEmitValidation | 5m | ~1-2M |
+| emitter/zod | FuzzEmitEnum | 5m | ~500K-1M |
+| hash | FuzzComputeSchemaHash | 10m | ~5-10M |
+| hash | FuzzComputeSchemaHash_Stability | 5m | ~2-5M |
+| hash | FuzzComputeSchemaHash_TypeChanges | 5m | ~2-5M |
+| hash | FuzzComputeSchemaHash_FieldOrder | 5m | ~2-5M |
+| parser | FuzzParsePackages | 5m | ~50-100 |
+
+**Total per CI run**: ~20-40 million test cases (parser is slow due to go/packages)
 
 **Benefits of CI fuzzing**:
-1. **Corpus growth**: Each run discovers new interesting inputs
-2. **Regression prevention**: Finds bugs before they reach production
-3. **Coverage expansion**: Explores code paths humans miss
-4. **Zero developer effort**: Runs automatically
+1. **Corpus growth**: Each run discovers new interesting inputs and caches them
+2. **Regression prevention**: Finds bugs in new code before merging to main
+3. **Coverage expansion**: Explores code paths developers never consider
+4. **Zero developer effort**: Runs automatically every 6 hours, 4x per day
+5. **Compound returns**: Gets more effective over time as corpus grows
+6. **Bug discovery timeline**: Finds bugs in hours/days instead of months/years in production
+
+**Why 6-hour intervals?**:
+- Frequent enough to catch bugs quickly (< 1 day latency)
+- Infrequent enough to allow corpus to grow between runs
+- Aligns with typical development cycles (morning/afternoon/evening/night)
+- GitHub Actions friendly (doesn't burn excessive compute)
+
+**Alternative: OSS-Fuzz**:
+For even more coverage, consider integrating with [OSS-Fuzz](https://github.com/google/oss-fuzz):
+- 24/7 continuous fuzzing on Google infrastructure
+- Free for open source projects
+- Automatic bug reporting
+- Corpus shared with community
+- Used by major projects (Go stdlib, Chrome, LLVM, etc.)
 
 ### Understanding Fuzz Output
 
