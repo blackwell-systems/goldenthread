@@ -11,39 +11,9 @@
 
 **goldenthread** generates type-safe validation schemas from Go struct definitions. Define your domain models once in Go with validation tags, and compile them into Zod schemas for TypeScript—automatically.
 
-## The Problem
+## Overview
 
-Maintaining validation logic across Go backends and TypeScript frontends requires constant manual synchronization:
-
-```
-Go Backend                          TypeScript Frontend
-──────────                          ───────────────────
-type User struct {                  interface User {
-  Username string                     username: string
-  Email    string                     email: string
-  Age      int                        age: number
-}                                   }
-
-// Manual validation                const userSchema = z.object({
-func ValidateUser(u User) error {    username: z.string().min(3).max(20),
-  if len(u.Username) < 3 {           email: z.string().email(),
-    return errors.New("too short")   age: z.number().min(13).max(130)
-  }                                 })
-  // ... more validation
-}
-```
-
-Every change requires updating:
-1. Go validation logic
-2. TypeScript types
-3. Zod schemas
-4. API documentation
-
-Miss one? Runtime errors, type mismatches, integration bugs.
-
-## The Solution
-
-goldenthread generates validation schemas from Go struct tags:
+Maintaining validation across Go backends and TypeScript frontends means keeping multiple representations synchronized. goldenthread generates Zod schemas directly from Go struct tags:
 
 ```go
 // Go: Define once with validation tags
@@ -74,7 +44,7 @@ const user: User = {
 }
 ```
 
-One source of truth. Impossible to drift.
+Changes to Go structs regenerate TypeScript schemas automatically. The compiler ensures they stay synchronized.
 
 ## Features
 
