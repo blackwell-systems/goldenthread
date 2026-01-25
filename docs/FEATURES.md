@@ -79,11 +79,12 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | `bool` | `z.boolean()` | ✅ Complete | Boolean values |
 | `time.Time` | `z.string().datetime()` | ✅ Complete | ISO 8601 datetime |
 | `[]T` | `z.array(T)` | ✅ Complete | Arrays with element type |
+| `map[string]T` | `z.record(z.string(), T)` | ✅ Complete | String-keyed maps |
 | `struct { ... }` | `z.object({...})` | ✅ Complete | Inline nested objects |
 | Named struct | `TypeSchema` | ✅ Complete | References to other schemas |
 | Embedded struct | Fields flattened | ✅ Complete | Automatic field promotion |
 | `*T` (pointer) | `T.optional()` | ✅ Complete | Pointer = optional semantics |
-| `map[K]V` | - | ⚠️ Parsed, not emitted | Could add `z.record()` |
+| `map[K]V` | `z.record(K, V)` | ✅ Complete | Maps with any key/value type |
 | `interface{}`, `any` | `z.any()` | ✅ Complete | Fallback for unknown types |
 
 ### Validation Rules
@@ -146,7 +147,6 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 
 ### ⚠️ Partially Implemented
 
-- **Map types**: Parsed into IR (`TypeMap`) but not emitted to Zod yet
 - **Unique items**: Tag parsed (`UniqueItems` bool) but requires custom Zod refinement
 - **Custom validators**: Tag parsed (`CustomValidators []string`) but needs function registry
 
