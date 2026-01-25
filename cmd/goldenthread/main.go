@@ -1,7 +1,29 @@
 // Copyright 2025 Dayna Blackwell / Blackwell Systems
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-// goldenthread CLI tool
+/*
+goldenthread is a CLI tool for generating TypeScript/Zod validation schemas from Go structs.
+
+# Usage
+
+	goldenthread generate ./models          # Generate Zod schemas
+	goldenthread check ./models             # Verify schemas are in sync
+	goldenthread version                    # Show version information
+
+# Examples
+
+Generate schemas from all structs in a directory:
+
+	goldenthread generate ./api/models --out ./frontend/src/schemas
+
+Verify schemas in CI:
+
+	goldenthread check ./models || exit 1
+
+# Documentation
+
+See https://pkg.go.dev/github.com/blackwell-systems/goldenthread for complete documentation.
+*/
 package main
 
 import (
