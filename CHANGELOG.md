@@ -97,6 +97,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatically handled in type resolution and emission
   - Example: `map[string][]User` → `z.record(z.string(), z.array(UserSchema))`
 
+- **Enum specification finalized**
+  - Tag syntax: `enum:value1,value2,value3`
+  - Smart token parser handles commas in enum values
+  - Supports values with underscores, hyphens, etc.
+  - Validates at least one value required
+  - String-only (type-checked at parse time)
+  - Emits correct `z.enum([...])` syntax
+  - Example: `Status string \`gt:"enum:pending,in_progress,completed"\`` → `z.enum(['pending', 'in_progress', 'completed'])`
+
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
   - Parsing table with IR mappings
