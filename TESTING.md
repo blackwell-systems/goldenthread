@@ -224,7 +224,7 @@ Continuous fuzzing is fundamentally different from one-time testing. Here's why 
 **Automatic notifications** when fuzzing discovers issues:
 
 **1. GitHub Issue Created Automatically**
-- Title: "🐛 Fuzzing found bug in [FuzzTestName]"
+- Title: "Fuzzing found bug in [FuzzTestName]"
 - Labels: `bug`, `fuzzing`, `automated`
 - Contains:
   - Exact command to reproduce locally
@@ -239,14 +239,14 @@ Continuous fuzzing is fundamentally different from one-time testing. Here's why 
 - Blocks merging if on PR
 
 **3. Workflow Summary**
-- Clear ✅ PASS or ❌ FAIL status per target
+- Clear PASS or FAIL status per target
 - Execution statistics
 - Direct links to artifacts
 
 **Example notification flow**:
 1. Fuzzing runs every 30 minutes
 2. Bug discovered in `FuzzEmitPattern`
-3. **GitHub issue created** with title "🐛 Fuzzing found bug in FuzzEmitPattern"
+3. **GitHub issue created** with title "Fuzzing found bug in FuzzEmitPattern"
 4. **Email sent** (if watching repo)
 5. **Artifact uploaded** with failing test case
 6. You see issue in your notifications
