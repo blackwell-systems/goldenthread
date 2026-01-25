@@ -114,22 +114,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - setupTestModule helper for isolated go/packages testing
 
 - **Continuous fuzzing infrastructure**
-  - GitHub Actions workflow running every 6 hours
-  - 10 parallel fuzz targets (5-10 minutes each)
-  - Corpus caching for improved effectiveness over time
-  - Automatic artifact uploads for failures
+  - GitHub Actions workflow running every 30 minutes (48x per day)
+  - 12 fuzz targets across parser, emitter, and hash packages
+  - Corpus caching for compound growth over time
+  - Automatic GitHub issue creation on failure with reproduction steps
   - Detailed statistics in job summaries
-  - Found and fixed 2 production bugs before release
+  - Found and fixed 2 production bugs before release (UTF-8 and regex escaping)
+
+- **CI/CD infrastructure**
+  - Comprehensive test suite running on Go 1.24 and 1.25.6
+  - Code linting with golangci-lint (20+ linters enabled)
+  - Automated formatting checks (gofmt, goimports)
+  - Coverage tracking with Codecov integration
+  - CI and Lint badges in README
 
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
-  - Parsing table with IR mappings
-  - Zod output mappings
-  - Valid and invalid examples
-  - Architecture documentation
-  - Design philosophy and decision rationale
-  - Complete testing strategy guide (TESTING.md)
-  - Fuzzing best practices and debugging workflow
+  - Architecture guide reflecting v0.1 implementation (docs/ARCHITECTURE.md)
+  - Complete testing strategy guide (docs/TESTING.md)
+  - Fuzzing bug log with technical analysis (docs/FUZZING_BUGS.md)
+  - Feature matrix (docs/FEATURES.md)
+  - All documentation organized in docs/ directory
 
 - **Dual licensing**
   - Apache-2.0 OR MIT
@@ -193,9 +198,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Kebab-case filename conversion (`toKebabCase()`)
 - Error propagation from parser through to CLI
 
-## [0.1.0] - TBD
+## [0.1.0] - 2026-01-25
 
-Initial release (in development)
+First stable release of goldenthread - a schema compiler that generates TypeScript/Zod validation from Go structs.
+
+**Core features:**
+- Generate Zod schemas from Go struct tags
+- Full type system support (primitives, arrays, maps, nested objects, time.Time)
+- Comprehensive validation rules (string length, numeric bounds, formats, enums, patterns)
+- Embedded struct flattening with collision detection
+- Hash-based drift detection for CI integration
+- 53.4% test coverage with continuous fuzzing
+
+**What's included:**
+- `goldenthread generate` - Generate Zod schemas from Go code
+- `goldenthread check` - Verify schemas are in sync (CI-ready)
+- Comprehensive documentation and examples
+- Production-ready with 2 bugs found and fixed by fuzzing before release
 
 [Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/blackwell-systems/goldenthread/releases/tag/v0.1.0
