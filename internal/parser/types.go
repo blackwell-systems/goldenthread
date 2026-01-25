@@ -12,17 +12,18 @@ import (
 )
 
 // extractTypeWithInfo extracts type information using go/types for proper resolution.
-// Falls back to AST-only parsing if TypeInfo is unavailable (shouldn't happen with go/packages).
+// Requires TypeInfo from go/packages - parser always uses ParsePackages which provides this.
 func (p *Parser) extractTypeWithInfo(expr ast.Expr, typeInfo *load.TypeInfo) schema.Type {
 	if typeInfo == nil || typeInfo.Info == nil {
-		// Fallback to AST-only parsing (for tests or edge cases)
+		// TypeInfo should always be present when using ParsePackages
+		// Fall back to best-effort AST parsing for robustness
 		return p.extractType(expr)
 	}
 	
 	// Get the type from go/types
 	tv, ok := typeInfo.Info.Types[expr]
 	if !ok {
-		// Fallback to AST parsing if type info not found
+		// Type info not found for this expression - use AST parsing
 		return p.extractType(expr)
 	}
 	
