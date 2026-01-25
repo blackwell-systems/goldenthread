@@ -182,8 +182,13 @@ func (e *Emitter) emitStringRules(b *strings.Builder, rules schema.FieldRules) {
 		b.WriteString(fmt.Sprintf(".max(%d)", *rules.MaxLength))
 	}
 	if rules.Pattern != nil {
-		// Escape backslashes for TypeScript
-		pattern := strings.ReplaceAll(*rules.Pattern, "\\", "\\\\")
+		// Escape special characters for JavaScript regex literal
+		pattern := *rules.Pattern
+		pattern = strings.ReplaceAll(pattern, "\\", "\\\\") // Backslash must be first
+		pattern = strings.ReplaceAll(pattern, "/", "\\/")   // Forward slash (regex delimiter)
+		pattern = strings.ReplaceAll(pattern, "\n", "\\n")  // Newline
+		pattern = strings.ReplaceAll(pattern, "\r", "\\r")  // Carriage return
+		pattern = strings.ReplaceAll(pattern, "\t", "\\t")  // Tab
 		b.WriteString(fmt.Sprintf(".regex(/%s/)", pattern))
 	}
 	if rules.Format != nil {
