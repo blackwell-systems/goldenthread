@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-01-25
+
+### Added
+
+- **Release automation** with goreleaser
+  - Cross-platform binary builds (Linux, macOS, Windows on AMD64/ARM64)
+  - Automatic checksums and archives
+  - Pre-built binaries attached to GitHub Releases
+- **Enhanced version command** showing commit hash and build date
+
+### Fixed
+
+- Go 1.24 compatibility issues in CI (dropped from test matrix)
+- Linter configuration for pragmatic v0.1 release
+
 ### Added
 
 - **Core schema compiler architecture**
@@ -216,5 +231,6 @@ First stable release of goldenthread - a schema compiler that generates TypeScri
 - Comprehensive documentation and examples
 - Production-ready with 2 bugs found and fixed by fuzzing before release
 
-[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/blackwell-systems/goldenthread/releases/tag/v0.1.0
