@@ -21,7 +21,6 @@ linters:
     - gocritic      # Comprehensive Go source code linter
     - nilerr        # Find code returning nil even if error checks fail
     - predeclared   # Find code that shadows predeclared identifiers
-    - exportloopref # Check for pointers to loop variables
     - whitespace    # Check for unnecessary whitespace
 
 linters-settings:
@@ -58,12 +57,17 @@ issues:
       linters:
         - errcheck
         - gocritic
+        - fieldalignment  # Don't care about struct field order in tests
+        - errorlint        # Type assertions are fine in tests
+        - predeclared     # Allow shadowing in test scopes
     
     # Exclude fuzz test files from some linters
     - path: fuzz_test\.go
       linters:
         - errcheck
         - gocritic
+        - unused          # Seed corpus helpers may appear unused
+        - predeclared
 
 output:
   formats:
