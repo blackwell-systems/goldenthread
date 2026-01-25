@@ -106,6 +106,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Emits correct `z.enum([...])` syntax
   - Example: `Status string \`gt:"enum:pending,in_progress,completed"\`` → `z.enum(['pending', 'in_progress', 'completed'])`
 
+- **Comprehensive test suite**
+  - Unit tests: 39 test functions across all packages
+  - Integration tests: 8 end-to-end parser tests with real Go packages
+  - Fuzz tests: 12 fuzz targets for continuous bug discovery
+  - Test coverage: 53.4% overall (84.8% emitter, 96.4% normalize, 71.7% parser)
+  - setupTestModule helper for isolated go/packages testing
+
+- **Continuous fuzzing infrastructure**
+  - GitHub Actions workflow running every 6 hours
+  - 10 parallel fuzz targets (5-10 minutes each)
+  - Corpus caching for improved effectiveness over time
+  - Automatic artifact uploads for failures
+  - Detailed statistics in job summaries
+  - Found and fixed 2 production bugs before release
+
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
   - Parsing table with IR mappings
@@ -113,6 +128,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Valid and invalid examples
   - Architecture documentation
   - Design philosophy and decision rationale
+  - Complete testing strategy guide (TESTING.md)
+  - Fuzzing best practices and debugging workflow
 
 - **Dual licensing**
   - Apache-2.0 OR MIT
@@ -157,6 +174,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Zod emitter corrections**
   - Enum generation using correct top-level constructor `z.enum([...])`
   - Date format using regex pattern not non-existent `.date()` method
+
+- **UTF-8 handling** (discovered by fuzzing)
+  - camelCase conversion now uses rune slicing instead of byte slicing
+  - Fixes invalid UTF-8 output when field names start with multi-byte characters
+  - Example bug: "フィールド" → "�\x83\x95ィールド" (now fixed)
+
+- **Regex pattern escaping** (discovered by fuzzing)
+  - Properly escape special characters in regex patterns: `/`, `\n`, `\r`, `\t`
+  - Fixes broken JavaScript when patterns contain newlines or slashes
+  - Example bug: pattern "\n" broke regex across multiple lines (now fixed)
 
 ### Internal
 

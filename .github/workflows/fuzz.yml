@@ -1,0 +1,169 @@
+name: Continuous Fuzzing
+
+on:
+  schedule:
+    # Run fuzzing every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch: # Allow manual triggering
+  push:
+    branches:
+      - main
+    paths:
+      - 'internal/**/*.go'
+      - 'cmd/**/*.go'
+      - '.github/workflows/fuzz.yml'
+
+jobs:
+  fuzz:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # Run different fuzz targets in parallel
+        target:
+          - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
+            test: FuzzEmit
+            time: 10m
+          - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
+            test: FuzzEmitFieldName
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
+            test: FuzzEmitValidation
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
+            test: FuzzEmitPattern
+            time: 10m
+          - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
+            test: FuzzEmitEnum
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/hash
+            test: FuzzComputeSchemaHash
+            time: 10m
+          - package: github.com/blackwell-systems/goldenthread/internal/hash
+            test: FuzzComputeSchemaHash_Stability
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/hash
+            test: FuzzComputeSchemaHash_TypeChanges
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/hash
+            test: FuzzComputeSchemaHash_FieldOrder
+            time: 5m
+          - package: github.com/blackwell-systems/goldenthread/internal/parser
+            test: FuzzParsePackages
+            time: 5m
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: Download fuzz corpus cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            **/testdata/fuzz
+          key: fuzz-corpus-${{ matrix.target.package }}-${{ matrix.target.test }}-${{ github.sha }}
+          restore-keys: |
+            fuzz-corpus-${{ matrix.target.package }}-${{ matrix.target.test }}-
+
+      - name: Run fuzzing
+        id: fuzz
+        continue-on-error: true
+        run: |
+          echo "Running ${{ matrix.target.test }} in ${{ matrix.target.package }}"
+          go test ${{ matrix.target.package }} \
+            -fuzz=^${{ matrix.target.test }}$ \
+            -fuzztime=${{ matrix.target.time }} \
+            -v 2>&1 | tee fuzz-output.log
+          
+          # Save exit code
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+
+      - name: Check for failures
+        if: steps.fuzz.outputs.exit_code != '0'
+        run: |
+          echo "::error::Fuzzing failed for ${{ matrix.target.test }}"
+          echo "Fuzz output:"
+          cat fuzz-output.log
+          exit 1
+
+      - name: Upload fuzz corpus artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-corpus-${{ matrix.target.test }}
+          path: |
+            **/testdata/fuzz
+          retention-days: 90
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-failure-${{ matrix.target.test }}-${{ github.run_id }}
+          path: |
+            fuzz-output.log
+            **/testdata/fuzz
+          retention-days: 30
+
+      - name: Parse fuzzing stats
+        if: always()
+        run: |
+          # Extract fuzzing statistics from output
+          EXECS=$(grep -oP 'execs: \K[0-9]+' fuzz-output.log | tail -1 || echo "0")
+          INTERESTING=$(grep -oP 'new interesting: \K[0-9]+' fuzz-output.log | tail -1 || echo "0")
+          
+          echo "📊 Fuzzing Stats for ${{ matrix.target.test }}:"
+          echo "- Executions: $EXECS"
+          echo "- New interesting inputs: $INTERESTING"
+          
+          # Create summary
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## Fuzzing: ${{ matrix.target.test }}
+          
+          - **Package**: \`${{ matrix.target.package }}\`
+          - **Duration**: ${{ matrix.target.time }}
+          - **Executions**: $EXECS
+          - **New Interesting Inputs**: $INTERESTING
+          - **Status**: ${{ steps.fuzz.outputs.exit_code == '0' && '✅ PASS' || '❌ FAIL' }}
+          EOF
+
+  summary:
+    name: Fuzzing Summary
+    runs-on: ubuntu-latest
+    needs: fuzz
+    if: always()
+    steps:
+      - name: Create overall summary
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          # 🔍 Continuous Fuzzing Complete
+          
+          Fuzzing has been running across multiple targets to discover edge cases and bugs.
+          
+          ## What is Fuzzing?
+          
+          Fuzzing automatically generates millions of random test inputs to find:
+          - Crashes and panics
+          - Invalid UTF-8 output
+          - Incorrect behavior on edge cases
+          - Security vulnerabilities
+          
+          ## Corpus Growth
+          
+          The fuzz corpus (interesting test cases) is cached and grows over time,
+          making each run more effective than the last.
+          
+          ## Next Steps
+          
+          - ✅ If all tests passed: corpus has been updated with new interesting cases
+          - ❌ If tests failed: check the artifacts for failing inputs and fix the bugs
+          
+          EOF
