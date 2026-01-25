@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-01-25
+
+### Added
+
+- **Enhanced pkg.go.dev documentation**
+  - Root doc.go with comprehensive overview and quick start
+  - Example tests demonstrating programmatic API usage
+  - Enhanced CLI package documentation
+- **CODEOWNERS file** for automatic review requests
+
 ## [0.1.1] - 2026-01-25
 
 ### Added
@@ -231,6 +241,7 @@ First stable release of goldenthread - a schema compiler that generates TypeScri
 - Comprehensive documentation and examples
 - Production-ready with 2 bugs found and fixed by fuzzing before release
 
-[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/blackwell-systems/goldenthread/releases/tag/v0.1.0
