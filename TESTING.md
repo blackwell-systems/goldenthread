@@ -219,7 +219,53 @@ Continuous fuzzing is fundamentally different from one-time testing. Here's why 
 - Storage: 500MB artifacts (we cache small corpus files)
 - Perfect fit for aggressive fuzzing strategy
 
-**Alternative: OSS-Fuzz**:
+### How You'll Know When Fuzzing Finds a Bug
+
+**Automatic notifications** when fuzzing discovers issues:
+
+**1. GitHub Issue Created Automatically**
+- Title: "🐛 Fuzzing found bug in [FuzzTestName]"
+- Labels: `bug`, `fuzzing`, `automated`
+- Contains:
+  - Exact command to reproduce locally
+  - Link to failing test case artifact
+  - Full fuzz output (last 100 lines)
+  - Workflow run link
+
+**2. GitHub Actions Failure**
+- Workflow status turns red
+- Email notification if you watch the repo
+- Shows in GitHub UI notifications
+- Blocks merging if on PR
+
+**3. Workflow Summary**
+- Clear ✅ PASS or ❌ FAIL status per target
+- Execution statistics
+- Direct links to artifacts
+
+**Example notification flow**:
+1. Fuzzing runs every 30 minutes
+2. Bug discovered in `FuzzEmitPattern`
+3. **GitHub issue created** with title "🐛 Fuzzing found bug in FuzzEmitPattern"
+4. **Email sent** (if watching repo)
+5. **Artifact uploaded** with failing test case
+6. You see issue in your notifications
+7. Click issue → get reproduction command
+8. Fix bug → update FUZZING_BUGS.md
+9. Close issue
+
+**Manual checking** (if you don't enable notifications):
+- Visit: https://github.com/[your-repo]/actions
+- Check "Continuous Fuzzing" workflow status
+- Red = bug found, Green = all clear
+
+**Recommended: Enable watch notifications**
+- Go to repository settings
+- Click "Watch" → "All Activity"
+- Enables email on CI failures
+- Get notified within minutes of bug discovery
+
+**Alternative: OSS-Fuzz**
 For even more coverage, consider integrating with [OSS-Fuzz](https://github.com/google/oss-fuzz):
 - 24/7 continuous fuzzing on Google infrastructure
 - Free for open source projects

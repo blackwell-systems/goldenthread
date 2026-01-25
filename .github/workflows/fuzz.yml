@@ -95,10 +95,73 @@ jobs:
       - name: Check for failures
         if: steps.fuzz.outputs.exit_code != '0'
         run: |
-          echo "::error::Fuzzing failed for ${{ matrix.target.test }}"
+          echo "::error::🐛 Fuzzing discovered a bug in ${{ matrix.target.test }}!"
           echo "Fuzz output:"
           cat fuzz-output.log
+          
+          # Extract the failing case ID if present
+          CASE_ID=$(grep -oP 'Failing input written to testdata/fuzz/\K[^/]+/[a-f0-9]+' fuzz-output.log || echo "unknown")
+          echo "::error::Failing test case: $CASE_ID"
+          echo "::error::Re-run locally with: go test ${{ matrix.target.package }} -run=${{ matrix.target.test }}/$CASE_ID"
           exit 1
+      
+      - name: Create GitHub issue for fuzz failure
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('fuzz-output.log', 'utf8');
+            
+            // Extract failure details
+            const caseMatch = output.match(/Failing input written to testdata\/fuzz\/([^/]+\/[a-f0-9]+)/);
+            const caseId = caseMatch ? caseMatch[1] : 'unknown';
+            const testName = '${{ matrix.target.test }}';
+            const pkg = '${{ matrix.target.package }}';
+            
+            // Create issue
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🐛 Fuzzing found bug in ${testName}`,
+              body: `## Fuzzing Failure
+            
+            **Fuzz Target**: \`${testName}\`
+            **Package**: \`${pkg}\`
+            **Failing Case**: \`${caseId}\`
+            **Run**: [Workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
+            
+            ### How to Reproduce
+            
+            \`\`\`bash
+            go test ${pkg} -run=${testName}/${caseId.split('/')[1]} -v
+            \`\`\`
+            
+            ### Artifacts
+            
+            - Download the failing input from the workflow artifacts: [fuzz-failure-${testName}-${context.runId}]
+            - Full fuzz output available in workflow logs
+            
+            ### Next Steps
+            
+            1. Reproduce locally with the command above
+            2. Examine the failing input case
+            3. Fix the bug
+            4. Add regression test to prevent recurrence
+            5. Update FUZZING_BUGS.md with details
+            
+            ---
+            
+            <details>
+            <summary>Fuzz Output (last 100 lines)</summary>
+            
+            \`\`\`
+            ${output.split('\n').slice(-100).join('\n')}
+            \`\`\`
+            
+            </details>`,
+              labels: ['bug', 'fuzzing', 'automated']
+            });
 
       - name: Upload fuzz corpus artifacts
         if: always()
