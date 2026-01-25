@@ -6,10 +6,7 @@ package parser
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -57,7 +54,7 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 				filePath = pkg.Pkg.PkgPath // Last resort
 			}
 			
-			schemas, err := p.extractSchemasWithPackage(pkg.Fset, file, filePath, pkg.Pkg.PkgPath)
+			schemas, err := p.extractSchemasInternal(pkg.Fset, file, filePath, pkg.Pkg.PkgPath)
 			if err != nil {
 				return nil, err
 			}
@@ -66,86 +63,6 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 	}
 	
 	return allSchemas, nil
-}
-
-// ParseFile parses a single Go file and extracts all schemas.
-func (p *Parser) ParseFile(path string) ([]*schema.Schema, error) {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, content, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
-
-	return p.extractSchemasWithPackage(fset, file, path, "")
-}
-
-// extractSchemasWithPackage extracts schemas with optional full package path.
-func (p *Parser) extractSchemasWithPackage(fset *token.FileSet, file *ast.File, path string, pkgPath string) ([]*schema.Schema, error) {
-	if pkgPath == "" {
-		// Fallback to package name from AST
-		pkgPath = file.Name.Name
-	}
-	return p.extractSchemasInternal(fset, file, path, pkgPath)
-}
-
-// extractSchemas is the old entry point (for backward compat).
-func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string) ([]*schema.Schema, error) {
-	return p.extractSchemasInternal(fset, file, path, file.Name.Name)
-}
-
-// ParseDir parses all Go files in a directory (non-recursive).
-func (p *Parser) ParseDir(dir string) ([]*schema.Schema, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var schemas []*schema.Schema
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") {
-			continue
-		}
-
-		path := filepath.Join(dir, entry.Name())
-		fileSchemas, err := p.ParseFile(path)
-		if err != nil {
-			return nil, err
-		}
-
-		schemas = append(schemas, fileSchemas...)
-	}
-
-	return schemas, nil
-}
-
-// ParseDirRecursive parses all Go files in a directory tree.
-func (p *Parser) ParseDirRecursive(root string) ([]*schema.Schema, error) {
-	var schemas []*schema.Schema
-
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() || !strings.HasSuffix(info.Name(), ".go") {
-			return nil
-		}
-
-		fileSchemas, err := p.ParseFile(path)
-		if err != nil {
-			return err
-		}
-
-		schemas = append(schemas, fileSchemas...)
-		return nil
-	})
-
-	return schemas, err
 }
 
 // extractSchemasInternal walks the AST and extracts schema definitions.
@@ -320,12 +237,8 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 		f.Optional = false
 	}
 
-	// Extract type information (use go/types if available)
-	if p.TypeInfo != nil {
-		f.Type = p.extractTypeWithInfo(field.Type, p.TypeInfo)
-	} else {
-		f.Type = p.extractType(field.Type)
-	}
+	// Extract type information using go/types
+	f.Type = p.extractTypeWithInfo(field.Type, p.TypeInfo)
 
 	// Extract documentation (prefer Doc, fallback to Comment)
 	if field.Doc != nil {
@@ -342,13 +255,8 @@ func (p *Parser) extractEmbeddedField(fset *token.FileSet, field *ast.Field, pat
 	// Extract type to determine the embedded type name
 	pos := fset.Position(field.Pos())
 	
-	// Get the type (use go/types if available)
-	var fieldType schema.Type
-	if p.TypeInfo != nil {
-		fieldType = p.extractTypeWithInfo(field.Type, p.TypeInfo)
-	} else {
-		fieldType = p.extractType(field.Type)
-	}
+	// Get the type using go/types
+	fieldType := p.extractTypeWithInfo(field.Type, p.TypeInfo)
 	
 	// For embedded fields, we mark them specially
 	// The field name will be the type name
