@@ -1,3 +1,6 @@
+// Copyright 2025 Blackwell Systems
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // goldenthread CLI tool
 package main
 

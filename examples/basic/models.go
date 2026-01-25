@@ -1,3 +1,6 @@
+// Copyright 2025 Blackwell Systems
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 package models
 
 // User represents a user account in the system.

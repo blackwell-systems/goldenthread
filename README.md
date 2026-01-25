@@ -259,7 +259,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-Apache 2.0 License - see [LICENSE](LICENSE) for details.
+Dual-licensed under your choice of:
+
+- **Apache License 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+
+This means you can choose either license for your use case. Most users prefer MIT for simplicity, while Apache 2.0 provides additional patent protections.
 
 ## Acknowledgments
 

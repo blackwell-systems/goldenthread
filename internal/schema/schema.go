@@ -1,3 +1,6 @@
+// Copyright 2025 Blackwell Systems
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Package schema defines the intermediate representation (IR) for domain schemas.
 // This IR is language-agnostic and serves as the bridge between Go AST parsing
 // and code generation for target languages (Zod, TypeScript, OpenAPI).

@@ -1,3 +1,6 @@
+// Copyright 2025 Blackwell Systems
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+
 // Package parser extracts schema definitions from Go source code using AST analysis.
 package parser
 
