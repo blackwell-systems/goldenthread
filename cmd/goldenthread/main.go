@@ -17,6 +17,13 @@ import (
 	"github.com/blackwell-systems/goldenthread/internal/parser"
 )
 
+// Version information (set by goreleaser)
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
 func main() {
 	if len(os.Args) < 2 {
 		printUsage()
@@ -42,7 +49,9 @@ func main() {
 			os.Exit(1)
 		}
 	case "version":
-		fmt.Println("goldenthread v0.1.0")
+		fmt.Printf("goldenthread %s\n", version)
+		fmt.Printf("  commit: %s\n", commit)
+		fmt.Printf("  built:  %s\n", date)
 	case "help", "-h", "--help":
 		printUsage()
 	default:

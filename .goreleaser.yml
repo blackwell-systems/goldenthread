@@ -1,0 +1,88 @@
+# goreleaser configuration for goldenthread
+# See: https://goreleaser.com
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: goldenthread
+    main: ./cmd/goldenthread
+    binary: goldenthread
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+
+archives:
+  - id: goldenthread
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - LICENSE-MIT
+      - LICENSE-APACHE
+      - README.md
+      - CHANGELOG.md
+      - docs/*
+
+checksum:
+  name_template: 'checksums.txt'
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^chore:'
+      - Merge pull request
+      - Merge branch
+  groups:
+    - title: Features
+      regexp: '^feat:'
+      order: 0
+    - title: Bug Fixes
+      regexp: '^fix:'
+      order: 1
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: blackwell-systems
+    name: goldenthread
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
+  footer: |
+    ## Installation
+    
+    ```bash
+    go install github.com/blackwell-systems/goldenthread/cmd/goldenthread@{{.Tag}}
+    ```
+    
+    Or download a pre-built binary for your platform above.
+    
+    ---
+    
+    **Full Changelog**: https://github.com/blackwell-systems/goldenthread/blob/{{.Tag}}/CHANGELOG.md
