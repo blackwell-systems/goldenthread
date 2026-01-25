@@ -401,6 +401,157 @@ func (p *Parser) extractJSONName(tags map[string]string) string {
 	return parts[0]
 }
 
+// tagToken represents a parsed token from a tag value.
+type tagToken struct {
+	value           string // The full token ("min:3" or "required")
+	isKeyValue      bool   // True if this is a key:value token
+	key             string // The key part ("min")
+	valueAfterColon string // The value part after colon ("3" or "a,b,c")
+}
+
+// parseTokens splits a tag value into tokens, respecting key:value boundaries.
+// This allows values to contain commas (e.g., "enum:a,b,c").
+func (p *Parser) parseTokens(tagValue string) []tagToken {
+	// Known token names that could appear as flags
+	knownFlags := map[string]bool{
+		"required": true, "optional": true,
+		"email": true, "uuid": true, "url": true,
+		"date": true, "datetime": true, "ipv4": true, "ipv6": true,
+	}
+	
+	var tokens []tagToken
+	var current strings.Builder
+	var currentKey string
+	inKeyValue := false
+	
+	for i := 0; i < len(tagValue); i++ {
+		ch := tagValue[i]
+		
+		switch ch {
+		case ':':
+			// Start of value in key:value pair
+			if !inKeyValue {
+				// Extract the key before the colon
+				currentKey = current.String()
+				inKeyValue = true
+			}
+			current.WriteByte(ch)
+		case ',':
+			if !inKeyValue {
+				// Regular token separator
+				if current.Len() > 0 {
+					tokens = append(tokens, p.makeToken(current.String()))
+					current.Reset()
+				}
+			} else {
+				// Check if this key allows comma-containing values
+				// Only "enum" needs this currently
+				if currentKey == "enum" {
+					// For enum, a comma ends the value ONLY if what follows is clearly a new token
+					// New token = has a colon (key:value) OR has comma after it (flag,...)
+					nextIsKey := false
+					if i+1 < len(tagValue) {
+						remaining := strings.TrimSpace(tagValue[i+1:])
+						if remaining != "" {
+							colonIdx := strings.Index(remaining, ":")
+							commaIdx := strings.Index(remaining, ",")
+							
+							if colonIdx != -1 && (commaIdx == -1 || colonIdx < commaIdx) {
+								// Colon before any comma = next is key:value
+								nextIsKey = true
+							} else if commaIdx != -1 {
+								// Has a comma = could be "enumval,enumval" or "enumval,flag" or "enumval,key:val"
+								if colonIdx != -1 && colonIdx > commaIdx {
+									// Colon comes AFTER the first comma = the part before comma could be a token
+									// Check what's before the comma
+									wordBeforeComma := strings.TrimSpace(remaining[:commaIdx])
+									if knownFlags[wordBeforeComma] {
+										// Known flag before comma
+										nextIsKey = true
+									} else {
+										// Not a known flag, assume it's an enum value
+										nextIsKey = false
+									}
+								} else if colonIdx != -1 && colonIdx < commaIdx {
+									// Colon comes BEFORE the first comma = would have been caught above
+									// This shouldn't happen but handle it
+									nextIsKey = true
+								} else {
+									// No colon after comma = check if what's before comma is a known flag
+									wordBeforeComma := strings.TrimSpace(remaining[:commaIdx])
+									if knownFlags[wordBeforeComma] {
+										// It's a known flag token, end enum here
+										nextIsKey = true
+									} else {
+										// Not a known flag = treat as enum value
+										nextIsKey = false
+									}
+								}
+							} else {
+								// No comma, no colon = check if it's a known flag
+								word := strings.TrimSpace(remaining)
+								if knownFlags[word] {
+									// Known flag token after enum
+									nextIsKey = true
+								}
+								// else: unknown word with no comma/colon = last enum value
+							}
+						}
+					}
+					
+					if nextIsKey {
+						// End the enum token
+						if current.Len() > 0 {
+							tokens = append(tokens, p.makeToken(current.String()))
+							current.Reset()
+							currentKey = ""
+						}
+						inKeyValue = false
+					} else {
+						// Comma is part of enum values
+						current.WriteByte(ch)
+					}
+				} else {
+					// For other keys, comma ends the value
+					if current.Len() > 0 {
+						tokens = append(tokens, p.makeToken(current.String()))
+						current.Reset()
+						currentKey = ""
+					}
+					inKeyValue = false
+				}
+			}
+		default:
+			current.WriteByte(ch)
+		}
+	}
+	
+	// Add final token
+	if current.Len() > 0 {
+		tokens = append(tokens, p.makeToken(current.String()))
+	}
+	
+	return tokens
+}
+
+// makeToken creates a tagToken from a raw token string.
+func (p *Parser) makeToken(raw string) tagToken {
+	idx := strings.Index(raw, ":")
+	if idx == -1 {
+		return tagToken{
+			value:      raw,
+			isKeyValue: false,
+		}
+	}
+	
+	return tagToken{
+		value:           raw,
+		isKeyValue:      true,
+		key:             raw[:idx],
+		valueAfterColon: raw[idx+1:],
+	}
+}
+
 // parseRulesWithValidation extracts validation rules with conflict detection.
 func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (schema.FieldRules, error) {
 	rules := schema.FieldRules{}
@@ -418,47 +569,47 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 		"min": true, "max": true, "len": true, "pattern": true,
 		"email": true, "uuid": true, "url": true,
 		"date": true, "datetime": true, "ipv4": true, "ipv6": true,
+		"enum": true,
 	}
 
-	parts := strings.Split(tagValue, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
+	// Parse tokens - need to handle key:value where value contains commas
+	tokens := p.parseTokens(tagValue)
+	
+	for _, token := range tokens {
+		token.value = strings.TrimSpace(token.value)
+		if token.value == "" {
 			continue
 		}
 
 		// Handle key:value rules
-		if idx := strings.Index(part, ":"); idx != -1 {
-			key := part[:idx]
-			value := part[idx+1:]
-			
+		if token.isKeyValue {
 			// Check if key is known
-			if !knownTokens[key] {
+			if !knownTokens[token.key] {
 				return rules, &schema.ValidationError{
-					Message: "unknown tag token: " + key,
+					Message: "unknown tag token: " + token.key,
 				}
 			}
 			
-			if err := p.applyRuleWithValidation(&rules, key, value, isString, isNumeric); err != nil {
+			if err := p.applyRuleWithValidation(&rules, token.key, token.valueAfterColon, isString, isNumeric); err != nil {
 				return rules, err
 			}
 		} else {
 			// Handle boolean flags
-			token := part
+			tokenValue := token.value
 			
 			// Skip presence flags (handled elsewhere)
-			if token == "required" || token == "optional" {
+			if tokenValue == "required" || tokenValue == "optional" {
 				continue
 			}
 			
 			// Check if token is known
-			if !knownTokens[token] {
+			if !knownTokens[tokenValue] {
 				return rules, &schema.ValidationError{
-					Message: "unknown tag token: " + token,
+					Message: "unknown tag token: " + tokenValue,
 				}
 			}
 			
-			if err := p.applyFlagWithValidation(&rules, token, isString, &formatCount); err != nil {
+			if err := p.applyFlagWithValidation(&rules, tokenValue, isString, &formatCount); err != nil {
 				return rules, err
 			}
 		}
@@ -548,6 +699,31 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 			}
 		}
 		rules.Pattern = &value
+	case "enum":
+		if !isString {
+			return &schema.ValidationError{
+				Message: "enum rule only applies to string types",
+			}
+		}
+		// Parse comma-separated enum values
+		// Note: values with commas not currently supported
+		enumValues := strings.Split(value, ",")
+		for i, v := range enumValues {
+			enumValues[i] = strings.TrimSpace(v)
+		}
+		// Filter out empty values
+		var filtered []string
+		for _, v := range enumValues {
+			if v != "" {
+				filtered = append(filtered, v)
+			}
+		}
+		if len(filtered) == 0 {
+			return &schema.ValidationError{
+				Message: "enum must have at least one value",
+			}
+		}
+		rules.Enum = filtered
 	}
 	return nil
 }

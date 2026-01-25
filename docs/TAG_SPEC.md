@@ -67,6 +67,31 @@ Semantics:
 
 - If used on non-string → **error**
 
+### Enum (string-only)
+
+- `enum:val1,val2,val3` - restricts field to one of the specified string values
+
+Maps to `FieldRules.Enum []string` in IR.
+
+**Validation:**
+
+- Must have at least one value
+- Values are trimmed of whitespace
+- Empty values after trimming are filtered out
+
+**Conflicts:**
+
+- If used on non-string → **error**
+- Enum values with commas not currently supported (limitation)
+
+**Examples:**
+
+```go
+Status string `gt:"enum:active,inactive,pending"`  // ✓ Valid
+Role   string `gt:"enum:admin,user"`              // ✓ Valid
+Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for strings
+```
+
 ### Formats (string-only)
 
 - `email` - email address
@@ -93,6 +118,7 @@ Semantics:
 | `date`     | `z.string().regex(/^\d{4}-\d{2}-\d{2}$/)` |
 | `ipv4`     | `z.string().ip({ version: 'v4' })`       |
 | `ipv6`     | `z.string().ip({ version: 'v6' })`       |
+| `enum:a,b` | `z.enum(['a', 'b'])`                     |
 
 ## Parsing Table
 
@@ -104,6 +130,7 @@ Semantics:
 | `max:N`         | kv        | numeric    | `Rules.Max`                          | error if non-numeric type |
 | `len:M..N`      | kv        | string     | `Rules.MinLength`, `Rules.MaxLength` | parse `..` range          |
 | `pattern:REGEX` | kv        | string     | `Rules.Pattern`                      | store raw                 |
+| `enum:a,b,c`    | kv        | string     | `Rules.Enum`                         | comma-separated values    |
 | `email`         | flag      | string     | `Rules.Format=FormatEmail`           | only one format           |
 | `uuid`          | flag      | string     | `Rules.Format=FormatUUID`            | only one format           |
 | `url`           | flag      | string     | `Rules.Format=FormatURL`             | only one format           |

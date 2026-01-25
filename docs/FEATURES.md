@@ -115,7 +115,7 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | Max items | `max:10` | `.max(10)` | ✅ Complete |
 | Unique items | `unique` | - | ⚠️ Parsed, not emitted |
 | **Enum** | | | |
-| Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | ✅ Complete |
+| Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | ✅ Complete | Values with underscores supported |
 | **Custom** | | | |
 | Custom validators | `validator:funcName` | - | ⚠️ Parsed, not emitted |
 
