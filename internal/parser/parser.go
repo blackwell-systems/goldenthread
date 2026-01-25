@@ -161,7 +161,10 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 	// Extract fields
 	for _, field := range structType.Fields.List {
 		for _, name := range field.Names {
-			f := p.extractField(fset, field, name.Name, path)
+			f, err := p.extractField(fset, field, name.Name, path)
+			if err != nil {
+				return nil
+			}
 			if f != nil {
 				s.Fields = append(s.Fields, *f)
 			}
@@ -172,9 +175,11 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 }
 
 // extractField converts an AST field to a schema Field.
-func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string, path string) *schema.Field {
+// Returns (nil, nil) if field should be skipped (no tags).
+// Returns (nil, error) if field has invalid configuration.
+func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string, path string) (*schema.Field, error) {
 	if field.Tag == nil {
-		return nil
+		return nil, nil
 	}
 
 	tagValue := field.Tag.Value
@@ -194,7 +199,7 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 	}
 
 	if !hasGT {
-		return nil
+		return nil, nil
 	}
 
 	pos := fset.Position(field.Pos())
@@ -213,7 +218,11 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 	var parseErr error
 	f.Rules, parseErr = p.parseRulesWithValidation(gtTag, field.Type)
 	if parseErr != nil {
-		return nil
+		if valErr, ok := parseErr.(*schema.ValidationError); ok {
+			valErr.Field = name
+			valErr.Pos = f.Pos
+		}
+		return nil, parseErr
 	}
 
 	// Determine optional semantics with conflict detection
@@ -224,7 +233,11 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 
 	// Conflict: both required and optional
 	if hasRequiredTag && hasOptionalTag {
-		return nil
+		return nil, &schema.ValidationError{
+			Field:   name,
+			Message: "field has both required and optional tags",
+			Pos:     f.Pos,
+		}
 	}
 
 	// Precedence:
@@ -253,7 +266,7 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 		f.Documentation = field.Doc.Text()
 	}
 
-	return f
+	return f, nil
 }
 
 // extractType converts an AST type expression to Type.
@@ -274,8 +287,8 @@ func (p *Parser) extractType(expr ast.Expr) schema.Type {
 			return schema.Type{
 				Kind: schema.TypeNamed,
 				Ref: &schema.TypeRef{
-					PackagePath: ident.Name,
-					Name:        t.Sel.Name,
+					PackageQualifier: ident.Name,
+					Name:             t.Sel.Name,
 				},
 			}
 		}
@@ -309,10 +322,15 @@ func (p *Parser) identToFieldType(name string) schema.Type {
 		return schema.Type{Kind: schema.TypeFloat}
 	case "bool":
 		return schema.Type{Kind: schema.TypeBool}
-	case "Time":
-		return schema.Type{Kind: schema.TypeTime}
 	default:
-		return schema.Type{Kind: schema.TypeAny}
+		// Unknown identifiers are named types (e.g., UserID, Email, custom types)
+		return schema.Type{
+			Kind: schema.TypeNamed,
+			Ref: &schema.TypeRef{
+				PackageQualifier: "", // Local package, will be resolved with go/packages
+				Name:             name,
+			},
+		}
 	}
 }
 
@@ -437,18 +455,26 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 				Message: "min rule only applies to numeric types",
 			}
 		}
-		if f := parseFloat(value); f != nil {
-			rules.Min = f
+		f := parseFloat(value)
+		if f == nil {
+			return &schema.ValidationError{
+				Message: "invalid min value: " + value,
+			}
 		}
+		rules.Min = f
 	case "max":
 		if !isNumeric {
 			return &schema.ValidationError{
 				Message: "max rule only applies to numeric types",
 			}
 		}
-		if f := parseFloat(value); f != nil {
-			rules.Max = f
+		f := parseFloat(value)
+		if f == nil {
+			return &schema.ValidationError{
+				Message: "invalid max value: " + value,
+			}
 		}
+		rules.Max = f
 	case "len":
 		if !isString {
 			return &schema.ValidationError{
@@ -456,16 +482,37 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 			}
 		}
 		// Parse range like "3..20"
-		if idx := strings.Index(value, ".."); idx != -1 {
-			minStr := value[:idx]
-			maxStr := value[idx+2:]
-			if min := parseInt(minStr); min != nil {
-				rules.MinLength = min
-			}
-			if max := parseInt(maxStr); max != nil {
-				rules.MaxLength = max
+		idx := strings.Index(value, "..")
+		if idx == -1 {
+			return &schema.ValidationError{
+				Message: "len rule must be in format M..N: " + value,
 			}
 		}
+		minStr := value[:idx]
+		maxStr := value[idx+2:]
+		
+		min := parseInt(minStr)
+		if min == nil {
+			return &schema.ValidationError{
+				Message: "invalid len min value: " + minStr,
+			}
+		}
+		
+		max := parseInt(maxStr)
+		if max == nil {
+			return &schema.ValidationError{
+				Message: "invalid len max value: " + maxStr,
+			}
+		}
+		
+		if *min > *max {
+			return &schema.ValidationError{
+				Message: "len min greater than max",
+			}
+		}
+		
+		rules.MinLength = min
+		rules.MaxLength = max
 	case "pattern":
 		if !isString {
 			return &schema.ValidationError{
@@ -493,7 +540,7 @@ func (p *Parser) applyFlagWithValidation(rules *schema.FieldRules, flag string, 
 			}
 		}
 		
-		*formatCount++
+		*formatCount = *formatCount + 1
 		if *formatCount > 1 {
 			return &schema.ValidationError{
 				Message: "multiple format constraints on single field",

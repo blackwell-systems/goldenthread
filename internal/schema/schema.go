@@ -78,8 +78,11 @@ type Type struct {
 
 // TypeRef references a named Go type.
 type TypeRef struct {
-	// PackagePath is the full import path (e.g., "time", "github.com/foo/bar")
-	PackagePath string
+	// PackageQualifier is the package qualifier or import path
+	// For AST-only parsing: may be package name ("time", "uuid")
+	// With go/packages: full import path ("github.com/google/uuid")
+	// Empty string means local package
+	PackageQualifier string
 
 	// Name is the type name (e.g., "Time", "User")
 	Name string
