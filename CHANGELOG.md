@@ -66,6 +66,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Excludes documentation and positions for stable hashes
   - Sorted fields and enum values for deterministic output
 
+- **go/packages integration** (proper type resolution)
+  - Uses `golang.org/x/tools/go/packages` for package loading
+  - Full type information via `go/types`
+  - Real import path resolution (`time.Time` → `"time"`, `uuid.UUID` → `"github.com/google/uuid"`)
+  - Handles modules, build tags, generated code, type aliases
+  - Foundation for embedded struct flattening
+  - Pattern support: `./models` or `./...` for recursive
+
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
   - Parsing table with IR mappings
