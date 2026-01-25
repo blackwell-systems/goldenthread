@@ -11,8 +11,8 @@ type Schema struct {
 	// Name is the struct name (e.g., "User")
 	Name string
 
-	// Package is the Go package name
-	Package string
+	// Package is the Go package path
+	PackagePath string
 
 	// Fields are the struct fields with their validation rules
 	Fields []Field
@@ -23,23 +23,24 @@ type Schema struct {
 	// Documentation is the comment above the struct
 	Documentation string
 
-	// Location tracks where this schema was defined
-	Location SourceLocation
+	// Pos tracks where this schema was defined
+	Pos SourcePos
 }
 
 // Field represents a single struct field with validation rules.
 type Field struct {
-	// Name is the Go field name (e.g., "Username")
-	Name string
+	// GoName is the Go field name (e.g., "Username")
+	GoName string
 
 	// JSONName is the JSON tag name (e.g., "username")
 	JSONName string
 
 	// Type is the field's type information
-	Type FieldType
+	Type Type
 
-	// Required indicates if this field must be present
-	Required bool
+	// Optional indicates if this field can be absent
+	// Derived from: pointer types, omitempty tag, or !required
+	Optional bool
 
 	// Rules are field-specific validation rules
 	Rules FieldRules
@@ -49,57 +50,61 @@ type Field struct {
 
 	// Tags preserves original Go struct tags
 	Tags map[string]string
+
+	// Pos tracks where this field was defined
+	Pos SourcePos
 }
 
-// FieldType describes a field's type structure.
-type FieldType struct {
+// Type describes a field's type structure.
+// Separates type references (named types) from shapes (scalars/composites).
+type Type struct {
 	// Kind is the base type category
 	Kind TypeKind
 
-	// Element is the type for array elements (when Kind == TypeArray)
-	Element *FieldType
+	// Ref is the reference to a named type (structs, custom types)
+	// Non-nil when Kind == TypeNamed
+	Ref *TypeRef
 
-	// Properties are nested fields (when Kind == TypeObject)
-	Properties []Field
+	// Elem is the element type for arrays (when Kind == TypeArray)
+	Elem *Type
 
-	// KeyType and ValueType for maps (when Kind == TypeMap)
-	KeyType   *FieldType
-	ValueType *FieldType
+	// Key and Value types for maps (when Kind == TypeMap)
+	Key   *Type
+	Value *Type
+
+	// Fields for inline object types (when Kind == TypeObject)
+	Fields []Field
+}
+
+// TypeRef references a named Go type.
+type TypeRef struct {
+	// PackagePath is the full import path (e.g., "time", "github.com/foo/bar")
+	PackagePath string
+
+	// Name is the type name (e.g., "Time", "User")
+	Name string
 }
 
 // TypeKind categorizes field types.
 type TypeKind int
 
 const (
-	// TypeString represents string types
+	// Scalar types
 	TypeString TypeKind = iota
-
-	// TypeInt represents integer types (int, int8, int16, int32, int64)
 	TypeInt
-
-	// TypeUint represents unsigned integer types
 	TypeUint
-
-	// TypeFloat represents floating-point types (float32, float64)
 	TypeFloat
-
-	// TypeBool represents boolean type
 	TypeBool
+	TypeTime
+	TypeUUID
 
-	// TypeArray represents slice/array types
+	// Composite types
 	TypeArray
-
-	// TypeObject represents struct/object types
+	TypeMap
 	TypeObject
 
-	// TypeMap represents map types
-	TypeMap
-
-	// TypeTime represents time.Time
-	TypeTime
-
-	// TypeUUID represents UUID types
-	TypeUUID
+	// Named type reference
+	TypeNamed
 
 	// TypeAny represents interface{} or any
 	TypeAny
@@ -118,16 +123,18 @@ func (k TypeKind) String() string {
 		return "float"
 	case TypeBool:
 		return "bool"
-	case TypeArray:
-		return "array"
-	case TypeObject:
-		return "object"
-	case TypeMap:
-		return "map"
 	case TypeTime:
 		return "time"
 	case TypeUUID:
 		return "uuid"
+	case TypeArray:
+		return "array"
+	case TypeMap:
+		return "map"
+	case TypeObject:
+		return "object"
+	case TypeNamed:
+		return "named"
 	case TypeAny:
 		return "any"
 	default:
@@ -152,6 +159,9 @@ type FieldRules struct {
 	MaxItems    *int
 	UniqueItems bool
 
+	// Enum values (for oneof)
+	Enum []string
+
 	// Custom validators (function names)
 	CustomValidators []string
 }
@@ -160,26 +170,13 @@ type FieldRules struct {
 type Format string
 
 const (
-	// FormatEmail represents email addresses
-	FormatEmail Format = "email"
-
-	// FormatUUID represents UUID strings
-	FormatUUID Format = "uuid"
-
-	// FormatURL represents URLs
-	FormatURL Format = "url"
-
-	// FormatDate represents ISO 8601 dates
-	FormatDate Format = "date"
-
-	// FormatDateTime represents ISO 8601 date-times
+	FormatEmail    Format = "email"
+	FormatUUID     Format = "uuid"
+	FormatURL      Format = "url"
+	FormatDate     Format = "date"
 	FormatDateTime Format = "datetime"
-
-	// FormatIPv4 represents IPv4 addresses
-	FormatIPv4 Format = "ipv4"
-
-	// FormatIPv6 represents IPv6 addresses
-	FormatIPv6 Format = "ipv6"
+	FormatIPv4     Format = "ipv4"
+	FormatIPv6     Format = "ipv6"
 )
 
 // Rule represents a schema-level validation rule (cross-field constraints).
@@ -205,30 +202,86 @@ const (
 	RuleDepends
 )
 
-// SourceLocation tracks where a schema was defined in source code.
-type SourceLocation struct {
+// SourcePos tracks where a schema element was defined in source code.
+// Used for readable generated comments and better error messages.
+type SourcePos struct {
 	// File is the absolute path to the Go file
 	File string
 
-	// Line is the line number where the struct starts
+	// Line is the line number
 	Line int
 
 	// Column is the column number
 	Column int
 }
 
+// String returns a file:line string for error messages.
+func (p SourcePos) String() string {
+	if p.File == "" {
+		return ""
+	}
+	return p.File + ":" + string(rune(p.Line))
+}
+
 // Validate checks if a Schema is semantically valid.
+// Enforces:
+// - Non-empty names
+// - No duplicate field names
+// - No conflicting optional/required flags
+// - Embedded struct collision detection
 func (s *Schema) Validate() error {
 	if s.Name == "" {
-		return &ValidationError{Field: "Name", Message: "schema name cannot be empty"}
+		return &ValidationError{
+			Field:   "Name",
+			Message: "schema name cannot be empty",
+			Pos:     s.Pos,
+		}
 	}
 
+	seen := make(map[string]SourcePos)
 	for i, field := range s.Fields {
-		if field.Name == "" {
+		if field.GoName == "" {
 			return &ValidationError{
 				Field:   "Fields",
 				Message: "field name cannot be empty",
 				Index:   &i,
+				Pos:     field.Pos,
+			}
+		}
+
+		if prevPos, exists := seen[field.GoName]; exists {
+			return &ValidationError{
+				Field:   field.GoName,
+				Message: "duplicate field name (previously defined at " + prevPos.String() + ")",
+				Index:   &i,
+				Pos:     field.Pos,
+			}
+		}
+		seen[field.GoName] = field.Pos
+
+		// Validate optional/required consistency
+		if !field.Optional {
+			hasRequired := false
+			if gtTag, ok := field.Tags["gt"]; ok {
+				if contains(gtTag, "required") {
+					hasRequired = true
+				}
+			}
+
+			hasOmitEmpty := false
+			if jsonTag, ok := field.Tags["json"]; ok {
+				if contains(jsonTag, "omitempty") {
+					hasOmitEmpty = true
+				}
+			}
+
+			if !hasRequired && hasOmitEmpty {
+				return &ValidationError{
+					Field:   field.GoName,
+					Message: "field has omitempty but is not optional (add required tag to override, or remove omitempty)",
+					Index:   &i,
+					Pos:     field.Pos,
+				}
 			}
 		}
 	}
@@ -241,12 +294,33 @@ type ValidationError struct {
 	Field   string
 	Message string
 	Index   *int
+	Pos     SourcePos
 }
 
 // Error implements the error interface.
 func (e *ValidationError) Error() string {
-	if e.Index != nil {
-		return "schema validation error: " + e.Field + "[" + string(rune(*e.Index)) + "]: " + e.Message
+	prefix := "schema validation error"
+	if e.Pos.File != "" {
+		prefix += " at " + e.Pos.String()
 	}
-	return "schema validation error: " + e.Field + ": " + e.Message
+
+	if e.Index != nil {
+		return prefix + ": " + e.Field + "[" + string(rune(*e.Index)) + "]: " + e.Message
+	}
+	return prefix + ": " + e.Field + ": " + e.Message
+}
+
+// Helper functions
+
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && indexOf(s, substr) >= 0
+}
+
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

@@ -143,9 +143,9 @@ func (p *Parser) extractSchemas(fset *token.FileSet, file *ast.File, path string
 // extractSchema converts an AST struct type to a Schema.
 func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType, pkg, path string) *schema.Schema {
 	s := &schema.Schema{
-		Name:    typeSpec.Name.Name,
-		Package: pkg,
-		Location: schema.SourceLocation{
+		Name:        typeSpec.Name.Name,
+		PackagePath: pkg,
+		Pos: schema.SourcePos{
 			File:   path,
 			Line:   fset.Position(typeSpec.Pos()).Line,
 			Column: fset.Position(typeSpec.Pos()).Column,
@@ -197,14 +197,19 @@ func (p *Parser) extractField(field *ast.Field, name string) *schema.Field {
 	}
 
 	f := &schema.Field{
-		Name:     name,
+		GoName:   name,
 		JSONName: p.extractJSONName(tags),
 		Tags:     tags,
+		Pos: schema.SourcePos{
+			File:   "",
+			Line:   0,
+			Column: 0,
+		},
 	}
 
 	// Parse validation rules from tag
 	f.Rules = p.parseRules(gtTag)
-	f.Required = p.isRequired(gtTag)
+	f.Optional = !p.isRequired(gtTag)
 
 	// Extract type information
 	f.Type = p.extractType(field.Type)
@@ -217,44 +222,44 @@ func (p *Parser) extractField(field *ast.Field, name string) *schema.Field {
 	return f
 }
 
-// extractType converts an AST type expression to FieldType.
-func (p *Parser) extractType(expr ast.Expr) schema.FieldType {
+// extractType converts an AST type expression to Type.
+func (p *Parser) extractType(expr ast.Expr) schema.Type {
 	switch t := expr.(type) {
 	case *ast.Ident:
 		return p.identToFieldType(t.Name)
 	case *ast.ArrayType:
-		return schema.FieldType{
-			Kind:    schema.TypeArray,
-			Element: &[]schema.FieldType{p.extractType(t.Elt)}[0],
+		return schema.Type{
+			Kind: schema.TypeArray,
+			Elem: &[]schema.Type{p.extractType(t.Elt)}[0],
 		}
 	case *ast.MapType:
-		return schema.FieldType{
-			Kind:      schema.TypeMap,
-			KeyType:   &[]schema.FieldType{p.extractType(t.Key)}[0],
-			ValueType: &[]schema.FieldType{p.extractType(t.Value)}[0],
+		return schema.Type{
+			Kind:  schema.TypeMap,
+			Key:   &[]schema.Type{p.extractType(t.Key)}[0],
+			Value: &[]schema.Type{p.extractType(t.Value)}[0],
 		}
 	default:
-		return schema.FieldType{Kind: schema.TypeAny}
+		return schema.Type{Kind: schema.TypeAny}
 	}
 }
 
 // identToFieldType maps Go type names to TypeKind.
-func (p *Parser) identToFieldType(name string) schema.FieldType {
+func (p *Parser) identToFieldType(name string) schema.Type {
 	switch name {
 	case "string":
-		return schema.FieldType{Kind: schema.TypeString}
+		return schema.Type{Kind: schema.TypeString}
 	case "int", "int8", "int16", "int32", "int64":
-		return schema.FieldType{Kind: schema.TypeInt}
+		return schema.Type{Kind: schema.TypeInt}
 	case "uint", "uint8", "uint16", "uint32", "uint64":
-		return schema.FieldType{Kind: schema.TypeUint}
+		return schema.Type{Kind: schema.TypeUint}
 	case "float32", "float64":
-		return schema.FieldType{Kind: schema.TypeFloat}
+		return schema.Type{Kind: schema.TypeFloat}
 	case "bool":
-		return schema.FieldType{Kind: schema.TypeBool}
+		return schema.Type{Kind: schema.TypeBool}
 	case "Time":
-		return schema.FieldType{Kind: schema.TypeTime}
+		return schema.Type{Kind: schema.TypeTime}
 	default:
-		return schema.FieldType{Kind: schema.TypeAny}
+		return schema.Type{Kind: schema.TypeAny}
 	}
 }
 

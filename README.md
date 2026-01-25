@@ -212,58 +212,6 @@ In traditional weaving, the golden thread is the single continuous strand that h
 
 Most systems today have a *broken thread*—manual synchronization between backend and frontend that inevitably drifts. goldenthread restores that continuous connection.
 
-## Project Status
-
-🚧 **Early Development** - Not ready for production use.
-
-Current focus:
-- [ ] Tag parser implementation
-- [ ] Schema IR design
-- [ ] Zod emitter
-- [ ] TypeScript emitter
-- [ ] OpenAPI emitter
-- [ ] CLI tool
-- [ ] CI integration helpers
-
-Star/watch this repository to follow progress.
-
-## Contributing
-
-Contributions welcome! This project follows the Go Code of Conduct.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Design Philosophy
-
-1. **Go structs are canonical** - Never write schemas twice
-2. **Explicit over magic** - Generated code is readable and debuggable
-3. **Gradual adoption** - Works with existing `validator.v10` tags
-4. **Standard tooling** - Feels like `go generate`, `sqlc`, `gqlgen`
-5. **CI-first** - Schema drift should fail builds, not cause runtime bugs
-
-## Roadmap
-
-### MVP (v0.1)
-- Basic tag parsing (`required`, `min`, `max`, `len`, `email`, `uuid`)
-- Zod schema generation
-- TypeScript type generation
-- CLI tool (`goldenthread generate`)
-
-### v0.2
-- OpenAPI 3.0 generation
-- `gt.AssertGenerated()` test helper
-- Cross-field validation support
-
-### v0.3
-- DSL for complex schemas
-- Custom validation functions
-- Schema composition
-
-### v1.0
-- Stable API
-- Full documentation
-- Production-ready
-
 ## License
 
 Dual-licensed under your choice of:
@@ -272,14 +220,6 @@ Dual-licensed under your choice of:
 - **MIT License** ([LICENSE-MIT](LICENSE-MIT))
 
 This means you can choose either license for your use case. Most users prefer MIT for simplicity, while Apache 2.0 provides additional patent protections.
-
-## Acknowledgments
-
-Inspired by:
-- Rust's `domainstack` for the concept of unified domain validation
-- `sqlc` for proving Go codegen can be elegant
-- `gqlgen` for schema-first development patterns
-- `protoc` for demonstrating cross-language type safety
 
 ---
 
