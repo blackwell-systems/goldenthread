@@ -95,7 +95,7 @@ jobs:
       - name: Check for failures
         if: steps.fuzz.outputs.exit_code != '0'
         run: |
-          echo "::error::🐛 Fuzzing discovered a bug in ${{ matrix.target.test }}!"
+          echo "::error::Fuzzing discovered a bug in ${{ matrix.target.test }}!"
           echo "Fuzz output:"
           cat fuzz-output.log
           
@@ -123,7 +123,7 @@ jobs:
             await github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `🐛 Fuzzing found bug in ${testName}`,
+              title: `Fuzzing found bug in ${testName}`,
               body: `## Fuzzing Failure
             
             **Fuzz Target**: \`${testName}\`
@@ -189,7 +189,7 @@ jobs:
           EXECS=$(grep -oP 'execs: \K[0-9]+' fuzz-output.log | tail -1 || echo "0")
           INTERESTING=$(grep -oP 'new interesting: \K[0-9]+' fuzz-output.log | tail -1 || echo "0")
           
-          echo "📊 Fuzzing Stats for ${{ matrix.target.test }}:"
+          echo "Fuzzing Stats for ${{ matrix.target.test }}:"
           echo "- Executions: $EXECS"
           echo "- New interesting inputs: $INTERESTING"
           
@@ -201,7 +201,7 @@ jobs:
           - **Duration**: ${{ matrix.target.time }}
           - **Executions**: $EXECS
           - **New Interesting Inputs**: $INTERESTING
-          - **Status**: ${{ steps.fuzz.outputs.exit_code == '0' && '✅ PASS' || '❌ FAIL' }}
+          - **Status**: ${{ steps.fuzz.outputs.exit_code == '0' && 'PASS' || 'FAIL' }}
           EOF
 
   summary:
@@ -213,7 +213,7 @@ jobs:
       - name: Create overall summary
         run: |
           cat >> $GITHUB_STEP_SUMMARY << 'EOF'
-          # 🔍 Continuous Fuzzing Complete
+          # Continuous Fuzzing Complete
           
           Fuzzing has been running across multiple targets to discover edge cases and bugs.
           
@@ -232,7 +232,7 @@ jobs:
           
           ## Next Steps
           
-          - ✅ If all tests passed: corpus has been updated with new interesting cases
-          - ❌ If tests failed: check the artifacts for failing inputs and fix the bugs
+          - If all tests passed: corpus has been updated with new interesting cases
+          - If tests failed: check the artifacts for failing inputs and fix the bugs
           
           EOF
