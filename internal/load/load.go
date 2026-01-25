@@ -27,6 +27,12 @@ type Package struct {
 // - "./..." - recursive
 // - "github.com/foo/bar" - import path
 func LoadPackages(patterns ...string) ([]*Package, error) {
+	return LoadPackagesWithDir("", patterns...)
+}
+
+// LoadPackagesWithDir loads packages with a specific working directory.
+// If dir is empty, uses current directory.
+func LoadPackagesWithDir(dir string, patterns ...string) ([]*Package, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName |
 			packages.NeedFiles |
@@ -35,6 +41,7 @@ func LoadPackages(patterns ...string) ([]*Package, error) {
 			packages.NeedTypesInfo |
 			packages.NeedImports,
 		Tests: false,
+		Dir:   dir,
 	}
 	
 	pkgs, err := packages.Load(cfg, patterns...)
