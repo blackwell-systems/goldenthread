@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/blackwell-systems/goldenthread/internal/load"
 	"github.com/blackwell-systems/goldenthread/internal/schema"
 )
 
@@ -23,6 +24,9 @@ type Parser struct {
 
 	// FallbackTags are alternative tags to check (e.g., "validate")
 	FallbackTags []string
+	
+	// TypeInfo provides go/types information for proper type resolution (optional)
+	TypeInfo *load.TypeInfo
 }
 
 // NewParser creates a new parser with default settings.
@@ -31,6 +35,37 @@ func NewParser() *Parser {
 		TagName:      "gt",
 		FallbackTags: []string{"validate"},
 	}
+}
+
+// ParsePackages parses schemas from loaded packages with full type information.
+func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
+	var allSchemas []*schema.Schema
+	
+	for _, pkg := range pkgs {
+		// Set type info for this package
+		p.TypeInfo = pkg.GetTypeInfo()
+		
+		// Parse each file in the package
+		for i, file := range pkg.Pkg.Syntax {
+			// Use GoFiles if available, otherwise use a generic path
+			filePath := ""
+			if i < len(pkg.Pkg.GoFiles) {
+				filePath = pkg.Pkg.GoFiles[i]
+			} else if len(pkg.Pkg.CompiledGoFiles) > 0 {
+				filePath = pkg.Pkg.CompiledGoFiles[0] // Fallback
+			} else {
+				filePath = pkg.Pkg.PkgPath // Last resort
+			}
+			
+			schemas, err := p.extractSchemas(pkg.Fset, file, filePath)
+			if err != nil {
+				return nil, err
+			}
+			allSchemas = append(allSchemas, schemas...)
+		}
+	}
+	
+	return allSchemas, nil
 }
 
 // ParseFile parses a single Go file and extracts all schemas.
@@ -258,8 +293,12 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 		f.Optional = false
 	}
 
-	// Extract type information
-	f.Type = p.extractType(field.Type)
+	// Extract type information (use go/types if available)
+	if p.TypeInfo != nil {
+		f.Type = p.extractTypeWithInfo(field.Type, p.TypeInfo)
+	} else {
+		f.Type = p.extractType(field.Type)
+	}
 
 	// Extract documentation (prefer Doc, fallback to Comment)
 	if field.Doc != nil {

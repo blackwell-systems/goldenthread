@@ -12,8 +12,8 @@ import (
 
 	"github.com/blackwell-systems/goldenthread/internal/emitter/zod"
 	"github.com/blackwell-systems/goldenthread/internal/hash"
+	"github.com/blackwell-systems/goldenthread/internal/load"
 	"github.com/blackwell-systems/goldenthread/internal/parser"
-	"github.com/blackwell-systems/goldenthread/internal/schema"
 )
 
 func main() {
@@ -108,19 +108,19 @@ func generate(args []string) error {
 		return fmt.Errorf("only 'zod' target is supported in v0.1")
 	}
 	
-	// Create parser
-	p := parser.NewParser()
-	
-	// Parse schemas
-	var schemas []*schema.Schema
-	var err error
-	
+	// Use go/packages for proper type resolution
+	pattern := inputDir
 	if *recursive {
-		schemas, err = p.ParseDirRecursive(inputDir)
-	} else {
-		schemas, err = p.ParseDir(inputDir)
+		pattern = inputDir + "/..."
 	}
 	
+	pkgs, err := load.LoadPackages(pattern)
+	if err != nil {
+		return fmt.Errorf("failed to load packages: %w", err)
+	}
+	
+	p := parser.NewParser()
+	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
@@ -219,16 +219,19 @@ func check(args []string) error {
 	
 	fmt.Printf("Checking against metadata (version: %s)\n", metadata.Version)
 	
-	// Parse current schemas
-	p := parser.NewParser()
-	var schemas []*schema.Schema
-	
+	// Use go/packages for proper type resolution
+	pattern := inputDir
 	if *recursive {
-		schemas, err = p.ParseDirRecursive(inputDir)
-	} else {
-		schemas, err = p.ParseDir(inputDir)
+		pattern = inputDir + "/..."
 	}
 	
+	pkgs, err := load.LoadPackages(pattern)
+	if err != nil {
+		return fmt.Errorf("failed to load packages: %w", err)
+	}
+	
+	p := parser.NewParser()
+	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
