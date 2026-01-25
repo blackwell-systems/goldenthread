@@ -209,20 +209,39 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 		},
 	}
 
-	// Parse validation rules from tag
-	f.Rules = p.parseRules(gtTag)
+	// Parse validation rules from tag with conflict detection
+	var parseErr error
+	f.Rules, parseErr = p.parseRulesWithValidation(gtTag, field.Type)
+	if parseErr != nil {
+		return nil
+	}
 
-	// Determine optional semantics:
-	// Default: required
-	// Optional if: pointer OR omitempty OR gt:"optional"
-	// gt:"required" overrides
+	// Determine optional semantics with conflict detection
 	isPtr := p.isPointer(field.Type)
 	omitEmpty := p.hasOmitEmpty(tags)
 	hasOptionalTag := p.containsToken(gtTag, "optional")
 	hasRequiredTag := p.containsToken(gtTag, "required")
 
-	f.Optional = isPtr || omitEmpty || hasOptionalTag
+	// Conflict: both required and optional
+	if hasRequiredTag && hasOptionalTag {
+		return nil
+	}
+
+	// Precedence:
+	// 1. required → Optional = false
+	// 2. optional → Optional = true
+	// 3. pointer → Optional = true
+	// 4. omitempty → Optional = true
+	// 5. default → Optional = false
 	if hasRequiredTag {
+		f.Optional = false
+	} else if hasOptionalTag {
+		f.Optional = true
+	} else if isPtr {
+		f.Optional = true
+	} else if omitEmpty {
+		f.Optional = true
+	} else {
 		f.Optional = false
 	}
 
@@ -336,40 +355,106 @@ func (p *Parser) extractJSONName(tags map[string]string) string {
 	return parts[0]
 }
 
-// parseRules extracts validation rules from a tag value.
-func (p *Parser) parseRules(tagValue string) schema.FieldRules {
+// parseRulesWithValidation extracts validation rules with conflict detection.
+func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (schema.FieldRules, error) {
 	rules := schema.FieldRules{}
+	
+	// Determine field type kind for validation
+	extractedType := p.extractType(fieldType)
+	isString := extractedType.Kind == schema.TypeString
+	isNumeric := extractedType.Kind == schema.TypeInt || 
+		extractedType.Kind == schema.TypeUint || 
+		extractedType.Kind == schema.TypeFloat
+
+	var formatCount int
+	knownTokens := map[string]bool{
+		"required": true, "optional": true,
+		"min": true, "max": true, "len": true, "pattern": true,
+		"email": true, "uuid": true, "url": true,
+		"date": true, "datetime": true, "ipv4": true, "ipv6": true,
+	}
 
 	parts := strings.Split(tagValue, ",")
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
 
 		// Handle key:value rules
 		if idx := strings.Index(part, ":"); idx != -1 {
 			key := part[:idx]
 			value := part[idx+1:]
-			p.applyRule(&rules, key, value)
+			
+			// Check if key is known
+			if !knownTokens[key] {
+				return rules, &schema.ValidationError{
+					Message: "unknown tag token: " + key,
+				}
+			}
+			
+			if err := p.applyRuleWithValidation(&rules, key, value, isString, isNumeric); err != nil {
+				return rules, err
+			}
 		} else {
-			// Handle boolean flags (required, email, etc.)
-			p.applyFlag(&rules, part)
+			// Handle boolean flags
+			token := part
+			
+			// Skip presence flags (handled elsewhere)
+			if token == "required" || token == "optional" {
+				continue
+			}
+			
+			// Check if token is known
+			if !knownTokens[token] {
+				return rules, &schema.ValidationError{
+					Message: "unknown tag token: " + token,
+				}
+			}
+			
+			if err := p.applyFlagWithValidation(&rules, token, isString, &formatCount); err != nil {
+				return rules, err
+			}
 		}
 	}
 
-	return rules
+	// Validate min/max relationship
+	if rules.Min != nil && rules.Max != nil && *rules.Min > *rules.Max {
+		return rules, &schema.ValidationError{
+			Message: "min value greater than max value",
+		}
+	}
+
+	return rules, nil
 }
 
-// applyRule applies a key:value rule to FieldRules.
-func (p *Parser) applyRule(rules *schema.FieldRules, key, value string) {
+// applyRuleWithValidation applies a key:value rule with type checking.
+func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value string, isString, isNumeric bool) error {
 	switch key {
 	case "min":
+		if !isNumeric {
+			return &schema.ValidationError{
+				Message: "min rule only applies to numeric types",
+			}
+		}
 		if f := parseFloat(value); f != nil {
 			rules.Min = f
 		}
 	case "max":
+		if !isNumeric {
+			return &schema.ValidationError{
+				Message: "max rule only applies to numeric types",
+			}
+		}
 		if f := parseFloat(value); f != nil {
 			rules.Max = f
 		}
 	case "len":
+		if !isString {
+			return &schema.ValidationError{
+				Message: "len rule only applies to string types",
+			}
+		}
 		// Parse range like "3..20"
 		if idx := strings.Index(value, ".."); idx != -1 {
 			minStr := value[:idx]
@@ -382,19 +467,43 @@ func (p *Parser) applyRule(rules *schema.FieldRules, key, value string) {
 			}
 		}
 	case "pattern":
+		if !isString {
+			return &schema.ValidationError{
+				Message: "pattern rule only applies to string types",
+			}
+		}
 		rules.Pattern = &value
 	}
+	return nil
 }
 
-// applyFlag applies a boolean flag to FieldRules.
-func (p *Parser) applyFlag(rules *schema.FieldRules, flag string) {
+// applyFlagWithValidation applies a boolean flag with conflict checking.
+func (p *Parser) applyFlagWithValidation(rules *schema.FieldRules, flag string, isString bool, formatCount *int) error {
 	format := schema.Format(flag)
+	
+	// Check if it's a format flag
 	switch format {
 	case schema.FormatEmail, schema.FormatUUID, schema.FormatURL,
 		schema.FormatDate, schema.FormatDateTime,
 		schema.FormatIPv4, schema.FormatIPv6:
+		
+		if !isString {
+			return &schema.ValidationError{
+				Message: "format " + flag + " only applies to string types",
+			}
+		}
+		
+		*formatCount++
+		if *formatCount > 1 {
+			return &schema.ValidationError{
+				Message: "multiple format constraints on single field",
+			}
+		}
+		
 		rules.Format = &format
 	}
+	
+	return nil
 }
 
 // containsToken checks if a tag value contains a specific token.
