@@ -21,7 +21,7 @@ type Parser struct {
 
 	// FallbackTags are alternative tags to check (e.g., "validate")
 	FallbackTags []string
-	
+
 	// TypeInfo provides go/types information for proper type resolution (optional)
 	TypeInfo *load.TypeInfo
 }
@@ -37,11 +37,11 @@ func NewParser() *Parser {
 // ParsePackages parses schemas from loaded packages with full type information.
 func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 	var allSchemas []*schema.Schema
-	
+
 	for _, pkg := range pkgs {
 		// Set type info for this package
 		p.TypeInfo = pkg.GetTypeInfo()
-		
+
 		// Parse each file in the package
 		for i, file := range pkg.Pkg.Syntax {
 			// Use GoFiles if available, otherwise use a generic path
@@ -53,7 +53,7 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 			} else {
 				filePath = pkg.Pkg.PkgPath // Last resort
 			}
-			
+
 			schemas, err := p.extractSchemasInternal(pkg.Fset, file, filePath, pkg.Pkg.PkgPath)
 			if err != nil {
 				return nil, err
@@ -61,7 +61,7 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 			allSchemas = append(allSchemas, schemas...)
 		}
 	}
-	
+
 	return allSchemas, nil
 }
 
@@ -254,15 +254,15 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 func (p *Parser) extractEmbeddedField(fset *token.FileSet, field *ast.Field, path string) (*schema.Field, error) {
 	// Extract type to determine the embedded type name
 	pos := fset.Position(field.Pos())
-	
+
 	// Get the type using go/types
 	fieldType := p.extractTypeWithInfo(field.Type, p.TypeInfo)
-	
+
 	// For embedded fields, we mark them specially
 	// The field name will be the type name
 	typeName := ""
 	var embeddedRef *schema.TypeRef
-	
+
 	if fieldType.Kind == schema.TypeNamed && fieldType.Ref != nil {
 		typeName = fieldType.Ref.Name
 		embeddedRef = fieldType.Ref
@@ -270,7 +270,7 @@ func (p *Parser) extractEmbeddedField(fset *token.FileSet, field *ast.Field, pat
 		// Can't determine embedded type name, skip
 		return nil, nil
 	}
-	
+
 	f := &schema.Field{
 		GoName:   typeName,
 		JSONName: "", // Embedded fields don't have JSON names (fields are promoted)
@@ -286,14 +286,14 @@ func (p *Parser) extractEmbeddedField(fset *token.FileSet, field *ast.Field, pat
 		Embedded:     true,
 		EmbeddedType: embeddedRef,
 	}
-	
+
 	// Extract documentation
 	if field.Doc != nil {
 		f.Documentation = normalizeDoc(field.Doc.Text())
 	} else if field.Comment != nil {
 		f.Documentation = normalizeDoc(field.Comment.Text())
 	}
-	
+
 	return f, nil
 }
 
@@ -418,15 +418,15 @@ func (p *Parser) parseTokens(tagValue string) []tagToken {
 		"email": true, "uuid": true, "url": true,
 		"date": true, "datetime": true, "ipv4": true, "ipv6": true,
 	}
-	
+
 	var tokens []tagToken
 	var current strings.Builder
 	var currentKey string
 	inKeyValue := false
-	
+
 	for i := 0; i < len(tagValue); i++ {
 		ch := tagValue[i]
-		
+
 		switch ch {
 		case ':':
 			// Start of value in key:value pair
@@ -455,7 +455,7 @@ func (p *Parser) parseTokens(tagValue string) []tagToken {
 						if remaining != "" {
 							colonIdx := strings.Index(remaining, ":")
 							commaIdx := strings.Index(remaining, ",")
-							
+
 							if colonIdx != -1 && (commaIdx == -1 || colonIdx < commaIdx) {
 								// Colon before any comma = next is key:value
 								nextIsKey = true
@@ -498,7 +498,7 @@ func (p *Parser) parseTokens(tagValue string) []tagToken {
 							}
 						}
 					}
-					
+
 					if nextIsKey {
 						// End the enum token
 						if current.Len() > 0 {
@@ -525,12 +525,12 @@ func (p *Parser) parseTokens(tagValue string) []tagToken {
 			current.WriteByte(ch)
 		}
 	}
-	
+
 	// Add final token
 	if current.Len() > 0 {
 		tokens = append(tokens, p.makeToken(current.String()))
 	}
-	
+
 	return tokens
 }
 
@@ -543,7 +543,7 @@ func (p *Parser) makeToken(raw string) tagToken {
 			isKeyValue: false,
 		}
 	}
-	
+
 	return tagToken{
 		value:           raw,
 		isKeyValue:      true,
@@ -555,12 +555,12 @@ func (p *Parser) makeToken(raw string) tagToken {
 // parseRulesWithValidation extracts validation rules with conflict detection.
 func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (schema.FieldRules, error) {
 	rules := schema.FieldRules{}
-	
+
 	// Determine field type kind for validation
 	extractedType := p.extractType(fieldType)
 	isString := extractedType.Kind == schema.TypeString
-	isNumeric := extractedType.Kind == schema.TypeInt || 
-		extractedType.Kind == schema.TypeUint || 
+	isNumeric := extractedType.Kind == schema.TypeInt ||
+		extractedType.Kind == schema.TypeUint ||
 		extractedType.Kind == schema.TypeFloat
 
 	var formatCount int
@@ -574,7 +574,7 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 
 	// Parse tokens - need to handle key:value where value contains commas
 	tokens := p.parseTokens(tagValue)
-	
+
 	for _, token := range tokens {
 		token.value = strings.TrimSpace(token.value)
 		if token.value == "" {
@@ -589,26 +589,26 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 					Message: "unknown tag token: " + token.key,
 				}
 			}
-			
+
 			if err := p.applyRuleWithValidation(&rules, token.key, token.valueAfterColon, isString, isNumeric); err != nil {
 				return rules, err
 			}
 		} else {
 			// Handle boolean flags
 			tokenValue := token.value
-			
+
 			// Skip presence flags (handled elsewhere)
 			if tokenValue == "required" || tokenValue == "optional" {
 				continue
 			}
-			
+
 			// Check if token is known
 			if !knownTokens[tokenValue] {
 				return rules, &schema.ValidationError{
 					Message: "unknown tag token: " + tokenValue,
 				}
 			}
-			
+
 			if err := p.applyFlagWithValidation(&rules, tokenValue, isString, &formatCount); err != nil {
 				return rules, err
 			}
@@ -669,27 +669,27 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 		}
 		minStr := value[:idx]
 		maxStr := value[idx+2:]
-		
+
 		min := parseInt(minStr)
 		if min == nil {
 			return &schema.ValidationError{
 				Message: "invalid len min value: " + minStr,
 			}
 		}
-		
+
 		max := parseInt(maxStr)
 		if max == nil {
 			return &schema.ValidationError{
 				Message: "invalid len max value: " + maxStr,
 			}
 		}
-		
+
 		if *min > *max {
 			return &schema.ValidationError{
 				Message: "len min greater than max",
 			}
 		}
-		
+
 		rules.MinLength = min
 		rules.MaxLength = max
 	case "pattern":
@@ -731,29 +731,29 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 // applyFlagWithValidation applies a boolean flag with conflict checking.
 func (p *Parser) applyFlagWithValidation(rules *schema.FieldRules, flag string, isString bool, formatCount *int) error {
 	format := schema.Format(flag)
-	
+
 	// Check if it's a format flag
 	switch format {
 	case schema.FormatEmail, schema.FormatUUID, schema.FormatURL,
 		schema.FormatDate, schema.FormatDateTime,
 		schema.FormatIPv4, schema.FormatIPv6:
-		
+
 		if !isString {
 			return &schema.ValidationError{
 				Message: "format " + flag + " only applies to string types",
 			}
 		}
-		
+
 		*formatCount = *formatCount + 1
 		if *formatCount > 1 {
 			return &schema.ValidationError{
 				Message: "multiple format constraints on single field",
 			}
 		}
-		
+
 		rules.Format = &format
 	}
-	
+
 	return nil
 }
 

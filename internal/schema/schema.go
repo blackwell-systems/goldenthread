@@ -53,11 +53,11 @@ type Field struct {
 
 	// Pos tracks where this field was defined
 	Pos SourcePos
-	
+
 	// Embedded indicates if this field is an embedded struct
 	// Embedded fields should be flattened during normalization
 	Embedded bool
-	
+
 	// EmbeddedType is the type reference for embedded structs
 	// Only set if Embedded is true
 	EmbeddedType *TypeRef

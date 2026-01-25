@@ -52,7 +52,7 @@ func (e *Emitter) Emit(s *schema.Schema) (string, error) {
 			regularFields = append(regularFields, field)
 		}
 	}
-	
+
 	for i, field := range regularFields {
 		e.emitField(&b, field, i == len(regularFields)-1)
 	}
@@ -251,10 +251,10 @@ func writeJSDoc(b *strings.Builder, indent string, doc string) {
 	if doc == "" {
 		return
 	}
-	
+
 	// Escape */ to prevent breaking the comment block
 	doc = strings.ReplaceAll(doc, "*/", "*\\/")
-	
+
 	b.WriteString(indent + "/**\n")
 	for _, line := range strings.Split(doc, "\n") {
 		line = strings.TrimRight(line, " \t")

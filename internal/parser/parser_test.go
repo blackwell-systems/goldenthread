@@ -68,7 +68,7 @@ func TestParseTokens(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokens := p.parseTokens(tt.input)
-			
+
 			if len(tokens) != len(tt.expected) {
 				t.Errorf("expected %d tokens, got %d", len(tt.expected), len(tokens))
 				for i, tok := range tokens {
@@ -76,7 +76,7 @@ func TestParseTokens(t *testing.T) {
 				}
 				return
 			}
-			
+
 			for i, expected := range tt.expected {
 				got := tokens[i]
 				if got.value != expected.value || got.isKeyValue != expected.isKeyValue {
@@ -84,7 +84,7 @@ func TestParseTokens(t *testing.T) {
 				}
 				if got.isKeyValue {
 					if got.key != expected.key || got.valueAfterColon != expected.valueAfterColon {
-						t.Errorf("token %d: expected key=%q val=%q, got key=%q val=%q", 
+						t.Errorf("token %d: expected key=%q val=%q, got key=%q val=%q",
 							i, expected.key, expected.valueAfterColon, got.key, got.valueAfterColon)
 					}
 				}

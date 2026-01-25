@@ -5,6 +5,8 @@
 [![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems) 
 [![Go Reference](https://pkg.go.dev/badge/github.com/blackwell-systems/goldenthread.svg)](https://pkg.go.dev/github.com/blackwell-systems/goldenthread) 
 [![Go Version](https://img.shields.io/badge/go-1.23+-blue.svg)](https://go.dev/) 
+[![CI](https://github.com/blackwell-systems/goldenthread/workflows/CI/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/ci.yml)
+[![Lint](https://github.com/blackwell-systems/goldenthread/workflows/Lint/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/lint.yml)
 
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
@@ -455,6 +457,9 @@ goldenthread is optimized for teams that:
 
 - [Tag Specification](docs/TAG_SPEC.md) - Complete tag syntax reference
 - [Feature Matrix](docs/FEATURES.md) - Detailed capability breakdown
+- [Architecture](docs/ARCHITECTURE.md) - System design and implementation details
+- [Testing Strategy](docs/TESTING.md) - Test suite and continuous fuzzing guide
+- [Fuzzing Bug Log](docs/FUZZING_BUGS.md) - Bugs discovered by continuous fuzzing
 - [Changelog](CHANGELOG.md) - Version history and changes
 
 ## Development

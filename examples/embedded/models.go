@@ -7,7 +7,7 @@ package embedded
 type Base struct {
 	// ID is the unique identifier
 	ID string `json:"id" gt:"uuid,required"`
-	
+
 	// CreatedAt is the creation timestamp
 	CreatedAt string `json:"created_at" gt:"datetime,required"`
 }
@@ -15,10 +15,10 @@ type Base struct {
 // User embeds Base and adds user-specific fields.
 type User struct {
 	Base
-	
+
 	// Username is the unique handle
 	Username string `json:"username" gt:"required,len:3..20"`
-	
+
 	// Email is the primary contact
 	Email string `json:"email" gt:"email"`
 }
@@ -26,10 +26,10 @@ type User struct {
 // Product embeds Base and adds product-specific fields.
 type Product struct {
 	Base
-	
+
 	// Name is the product name
 	Name string `json:"name" gt:"required,len:1..100"`
-	
+
 	// Price is the product price
 	Price float64 `json:"price" gt:"required,min:0"`
 }

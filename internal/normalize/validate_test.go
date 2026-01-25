@@ -56,8 +56,8 @@ func TestValidateJSONNames_FallbackToGoName(t *testing.T) {
 			Name:        "User",
 			PackageName: "test",
 			Fields: []schema.Field{
-				{GoName: "ID", JSONName: ""},     // No JSON tag, falls back to "ID"
-				{GoName: "Name", JSONName: ""},   // No JSON tag, falls back to "Name"
+				{GoName: "ID", JSONName: ""},   // No JSON tag, falls back to "ID"
+				{GoName: "Name", JSONName: ""}, // No JSON tag, falls back to "Name"
 				{GoName: "Email", JSONName: "email"},
 			},
 		},

@@ -24,22 +24,22 @@ func ValidateJSONNames(schemas []*schema.Schema) error {
 // validateSchemaJSONNames checks a single schema for JSON name collisions.
 func validateSchemaJSONNames(s *schema.Schema) error {
 	jsonNames := make(map[string]*schema.Field)
-	
+
 	for i := range s.Fields {
 		field := &s.Fields[i]
-		
+
 		// Skip embedded fields (should already be flattened)
 		if field.Embedded {
 			continue
 		}
-		
+
 		// Get the JSON name for this field
 		jsonName := field.JSONName
 		if jsonName == "" {
 			// Fallback to Go field name if no JSON tag
 			jsonName = field.GoName
 		}
-		
+
 		// Check for collision
 		if existingField, exists := jsonNames[jsonName]; exists {
 			return &schema.ValidationError{
@@ -54,10 +54,10 @@ func validateSchemaJSONNames(s *schema.Schema) error {
 				Pos: field.Pos,
 			}
 		}
-		
+
 		jsonNames[jsonName] = field
 	}
-	
+
 	return nil
 }
 
@@ -75,10 +75,10 @@ func ValidateGoNames(schemas []*schema.Schema) error {
 // validateSchemaGoNames checks a single schema for Go field name duplicates.
 func validateSchemaGoNames(s *schema.Schema) error {
 	goNames := make(map[string]*schema.Field)
-	
+
 	for i := range s.Fields {
 		field := &s.Fields[i]
-		
+
 		// Check for collision
 		if existingField, exists := goNames[field.GoName]; exists {
 			return &schema.ValidationError{
@@ -90,9 +90,9 @@ func validateSchemaGoNames(s *schema.Schema) error {
 				Pos: field.Pos,
 			}
 		}
-		
+
 		goNames[field.GoName] = field
 	}
-	
+
 	return nil
 }

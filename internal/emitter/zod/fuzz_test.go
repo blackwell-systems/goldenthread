@@ -46,7 +46,7 @@ func FuzzEmit(f *testing.F) {
 
 		defer func() {
 			if r := recover(); r != nil {
-				t.Errorf("Emit panicked on schema=%q field=%q json=%q: %v", 
+				t.Errorf("Emit panicked on schema=%q field=%q json=%q: %v",
 					schemaName, fieldGoName, fieldJSONName, r)
 			}
 		}()
@@ -77,7 +77,7 @@ func FuzzEmit(f *testing.F) {
 		if output != "" {
 			// Verify output is valid UTF-8
 			if !utf8.ValidString(output) {
-				t.Errorf("Emit produced invalid UTF-8 for schema=%q field=%q json=%q", 
+				t.Errorf("Emit produced invalid UTF-8 for schema=%q field=%q json=%q",
 					schemaName, fieldGoName, fieldJSONName)
 			}
 
@@ -134,7 +134,7 @@ func FuzzEmitFieldName(f *testing.F) {
 
 		emitter := NewEmitter()
 		output, err := emitter.Emit(s)
-		
+
 		if err != nil {
 			return
 		}
@@ -191,7 +191,7 @@ func FuzzEmitValidation(f *testing.F) {
 
 		emitter := NewEmitter()
 		output, err := emitter.Emit(s)
-		
+
 		if err != nil {
 			return
 		}
@@ -249,7 +249,7 @@ func FuzzEmitPattern(f *testing.F) {
 
 		emitter := NewEmitter()
 		output, err := emitter.Emit(s)
-		
+
 		if err != nil {
 			return
 		}
@@ -325,7 +325,7 @@ func FuzzEmitEnum(f *testing.F) {
 
 		emitter := NewEmitter()
 		output, err := emitter.Emit(s)
-		
+
 		if err != nil {
 			return
 		}

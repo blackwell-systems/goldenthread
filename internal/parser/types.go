@@ -19,14 +19,14 @@ func (p *Parser) extractTypeWithInfo(expr ast.Expr, typeInfo *load.TypeInfo) sch
 		// Fall back to best-effort AST parsing for robustness
 		return p.extractType(expr)
 	}
-	
+
 	// Get the type from go/types
 	tv, ok := typeInfo.Info.Types[expr]
 	if !ok {
 		// Type info not found for this expression - use AST parsing
 		return p.extractType(expr)
 	}
-	
+
 	return p.convertGoType(tv.Type, typeInfo)
 }
 
@@ -36,28 +36,28 @@ func (p *Parser) convertGoType(t types.Type, typeInfo *load.TypeInfo) schema.Typ
 	if ptr, ok := t.(*types.Pointer); ok {
 		return p.convertGoType(ptr.Elem(), typeInfo)
 	}
-	
+
 	switch t := t.(type) {
 	case *types.Basic:
 		return p.convertBasicType(t)
-		
+
 	case *types.Named:
 		return p.convertNamedType(t)
-		
+
 	case *types.Slice:
 		elemType := p.convertGoType(t.Elem(), typeInfo)
 		return schema.Type{
 			Kind: schema.TypeArray,
 			Elem: &elemType,
 		}
-		
+
 	case *types.Array:
 		elemType := p.convertGoType(t.Elem(), typeInfo)
 		return schema.Type{
 			Kind: schema.TypeArray,
 			Elem: &elemType,
 		}
-		
+
 	case *types.Map:
 		keyType := p.convertGoType(t.Key(), typeInfo)
 		valType := p.convertGoType(t.Elem(), typeInfo)
@@ -66,11 +66,11 @@ func (p *Parser) convertGoType(t types.Type, typeInfo *load.TypeInfo) schema.Typ
 			Key:   &keyType,
 			Value: &valType,
 		}
-		
+
 	case *types.Struct:
 		// Inline struct - would need to extract fields
 		return schema.Type{Kind: schema.TypeObject}
-		
+
 	default:
 		return schema.Type{Kind: schema.TypeAny}
 	}
@@ -98,17 +98,17 @@ func (p *Parser) convertBasicType(t *types.Basic) schema.Type {
 func (p *Parser) convertNamedType(t *types.Named) schema.Type {
 	obj := t.Obj()
 	pkg := obj.Pkg()
-	
+
 	// Handle standard library types
 	if pkg != nil {
 		pkgPath := pkg.Path()
 		typeName := obj.Name()
-		
+
 		// Special handling for time.Time
 		if pkgPath == "time" && typeName == "Time" {
 			return schema.Type{Kind: schema.TypeTime}
 		}
-		
+
 		// Return as named type with real package path
 		return schema.Type{
 			Kind: schema.TypeNamed,
@@ -118,7 +118,7 @@ func (p *Parser) convertNamedType(t *types.Named) schema.Type {
 			},
 		}
 	}
-	
+
 	// Local package type (no import needed)
 	return schema.Type{
 		Kind: schema.TypeNamed,
