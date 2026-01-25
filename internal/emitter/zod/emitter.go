@@ -232,7 +232,12 @@ func camelCase(s string) string {
 	if s == "" {
 		return ""
 	}
-	return strings.ToLower(s[:1]) + s[1:]
+	// Handle UTF-8 properly - convert first rune to lowercase
+	runes := []rune(s)
+	if len(runes) > 0 {
+		runes[0] = []rune(strings.ToLower(string(runes[0])))[0]
+	}
+	return string(runes)
 }
 
 // writeJSDoc writes a JSDoc comment block with proper escaping.
