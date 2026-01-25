@@ -1,6 +1,6 @@
 module github.com/blackwell-systems/goldenthread
 
-go 1.25.5
+go 1.25.6
 
 require (
 	golang.org/x/mod v0.32.0 // indirect
