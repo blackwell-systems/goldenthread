@@ -71,8 +71,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Full type information via `go/types`
   - Real import path resolution (`time.Time` → `"time"`, `uuid.UUID` → `"github.com/google/uuid"`)
   - Handles modules, build tags, generated code, type aliases
-  - Foundation for embedded struct flattening
+  - Full package paths in registry for embedded struct resolution
   - Pattern support: `./models` or `./...` for recursive
+
+- **Embedded struct flattening**
+  - Automatic field promotion from embedded structs
+  - Two-pass algorithm: register schemas, then flatten
+  - Recursive flattening with cycle detection
+  - Collision detection for GoName and JSONName conflicts
+  - Preserves field documentation, validation rules, tags
+  - Cross-package support when types in registry
+  - Example: `type User struct { Base; Username string }` promotes Base fields into User schema
 
 - **Documentation**
   - Comprehensive tag specification (docs/TAG_SPEC.md)
