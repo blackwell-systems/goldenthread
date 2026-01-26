@@ -120,6 +120,66 @@ flowchart TB
 - Resolves embedded structs and nested type references
 - Handles `time.Time` and other standard library types
 
+**Tag Token Parsing**:
+
+The parser uses a character-by-character state machine to handle context-sensitive comma semantics in `gt:` tags. This is one of the most complex parts of the parser because commas have different meanings depending on context:
+
+- `enum:pending,completed,cancelled` - commas **separate** enum values
+- `pattern:^\d{3,10}$` - comma is **part** of regex quantifier
+- `min:0,max:5` - comma **separates** validation rules
+- `len:3..20,required` - comma **separates** rules
+
+The state machine tracks `currentKey` and `inKeyValue` state:
+
+```go
+// Parsing: gt:"required,pattern:^\d{1,14}$,len:3..20"
+
+State transitions:
+1. "required" → flag token (no colon)
+2. "," → end token, reset
+3. "pattern:" → key detected, inKeyValue=true, currentKey="pattern"
+4. "^\d{1" → accumulate in current value
+5. "," → CHECK: is this part of pattern or new token?
+   - Look ahead: remaining is "14}$,len:3..20"
+   - No colon before next comma → comma is PART OF pattern value
+   - Continue accumulating
+6. "14}$" → complete pattern value
+7. "," → Look ahead: remaining is "len:3..20"
+   - Colon before next comma → new key:value pair follows
+   - End pattern token: "pattern:^\d{1,14}$"
+8. "len:3..20" → new key:value token
+```
+
+**Special handling for different keys**:
+
+```go
+if currentKey == "pattern" {
+    // Commas are ALWAYS part of the regex (quantifiers like {3,10})
+    // Only end when next content has colon (new key:value)
+    nextIsKey := colonBeforeComma(remaining)
+    if nextIsKey {
+        endToken()
+    } else {
+        current.WriteByte(',')  // Comma is part of pattern
+    }
+} else if currentKey == "enum" {
+    // Commas separate enum values UNLESS followed by known token
+    // "enum:a,b,c,required" → values=[a,b,c], then new token "required"
+    nextIsKey := hasColonOrKnownFlag(remaining)
+    if nextIsKey {
+        endToken()
+    } else {
+        current.WriteByte(',')  // Comma is enum separator
+    }
+} else {
+    // Default: comma always ends key:value pair
+    // "min:0,max:5" → separate tokens
+    endToken()
+}
+```
+
+This approach maintains backward compatibility with enum handling while correctly parsing regex patterns with comma quantifiers.
+
 **Example**:
 
 ```go
@@ -127,6 +187,7 @@ flowchart TB
 type User struct {
     Username string `json:"username" gt:"required,len:3..20"`
     Email    string `json:"email" gt:"email"`
+    Phone    *string `json:"phone" gt:"pattern:^\+[1-9]\d{1,14}$"`
 }
 
 // Parser extracts
@@ -150,9 +211,64 @@ Schema{
             Type: Type{Kind: TypeString},
             ValidationRules: ValidationRules{Email: ptr(true)},
         },
+        {
+            GoName: "Phone",
+            JSONName: "phone",
+            Type: Type{Kind: TypeString, IsPointer: true},
+            ValidationRules: ValidationRules{
+                Pattern: ptr(`^\+[1-9]\d{1,14}$`),  // Comma in {1,14} parsed correctly
+            },
+        },
     },
 }
 ```
+
+**Type-Aware Validation**:
+
+The parser validates rules based on field types to catch errors at build time:
+
+```go
+// Determine field type
+extractedType := p.extractType(field.Type)
+isString := extractedType.Kind == schema.TypeString
+isNumeric := extractedType.Kind == schema.TypeInt/Uint/Float
+isArray := extractedType.Kind == schema.TypeArray
+
+// Type checking prevents nonsensical rules
+case "pattern":
+    if !isString {
+        return error("pattern only applies to strings")
+    }
+
+case "min", "max":
+    if !isNumeric && !isArray {
+        return error("min/max only applies to numeric or array types")
+    }
+    // For arrays: min/max = length constraints
+    // For numeric: min/max = value constraints
+
+case "len":
+    if !isString {
+        return error("len only applies to strings")
+    }
+```
+
+This caught a subtle bug where array fields with `gt:"min:0,max:5"` were rejected (parser thought min/max only applied to numbers). The fix extended validation to accept both numeric and array types.
+
+**Design Decision: Why Not a "Cleaner" Two-Pass Parser?**
+
+The current implementation uses context-sensitive comma handling (tracking `currentKey` and `inKeyValue` state). While a two-pass approach (first pass: split by braces, second pass: parse tokens) seems cleaner in theory, it proved more complex in practice because:
+
+1. **Enum values** don't use delimiters - `enum:a,b,c` needs commas as value separators, not protected by braces
+2. **Mixed semantics** - The parser needs to know BOTH token structure (where tokens end) AND token type (is this an enum?) simultaneously
+3. **Lookahead required** - `enum:a,b,optional` needs to check if `,optional` starts a new token by looking at the word "optional"
+
+The single-pass character-by-character approach, while verbose, handles all three cases correctly:
+- Regex patterns with `{n,m}` quantifiers  
+- Enum values with comma-separated lists
+- Normal `key:value,key:value` sequences
+
+This is a case where domain-specific complexity (Go struct tag DSL) makes a specialized parser more maintainable than a generic approach. The code is well-tested and handles all edge cases discovered by fuzzing.
 
 ### 2. Schema IR (`internal/schema`)
 
