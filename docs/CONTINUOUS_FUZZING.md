@@ -384,7 +384,7 @@ func camelCase(s string) string {
 }
 ```
 
-The `s[:1]` slice operates on **bytes**, not characters. Japanese "フィールド" is bytes `[0xE3, 0x83, 0x95, 0x82, 0xA3, ...]`. Slicing `s[:1]` returns `[0xE3]` (incomplete UTF-8 sequence), producing invalid output: `"�\x83\x95ィールド"`.
+The `s[:1]` slice operates on **bytes**, not characters (runes). Japanese "フィールド" is encoded as 15 bytes in UTF-8 (5 characters × 3 bytes each). Slicing `s[:1]` returns just `[0xE3]` - the first byte of a 3-byte character - which is an incomplete UTF-8 sequence. The output fails UTF-8 validation.
 
 **How fuzzing caught it:**
 
