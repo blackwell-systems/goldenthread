@@ -2,32 +2,28 @@ name: Continuous Fuzzing
 
 on:
   schedule:
-    # Run fuzzing every 30 minutes (maximum practical frequency)
     - cron: '*/30 * * * *'
-  workflow_dispatch: # Allow manual triggering
+  workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'internal/**/*.go'
       - 'cmd/**/*.go'
       - '.github/workflows/fuzz.yml'
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'internal/**/*.go'
       - 'cmd/**/*.go'
 
 jobs:
   fuzz:
-    name: Fuzz Testing
+    name: Fuzz (${{ matrix.target.test }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        # Run different fuzz targets in parallel
         target:
           - package: github.com/blackwell-systems/goldenthread/internal/emitter/zod
             test: FuzzEmit
@@ -61,8 +57,7 @@ jobs:
             time: 5m
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -70,27 +65,30 @@ jobs:
           go-version: '1.23'
           cache: true
 
-      - name: Download fuzz corpus cache
+      - name: Restore fuzz corpus cache
         uses: actions/cache@v4
         with:
           path: |
-            **/testdata/fuzz
-          key: fuzz-corpus-${{ matrix.target.package }}-${{ matrix.target.test }}-${{ github.sha }}
+            internal/**/testdata/fuzz/**/corpus
+          # Key on branch + target so corpus persists across commits
+          key: fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-${{ matrix.target.test }}
           restore-keys: |
-            fuzz-corpus-${{ matrix.target.package }}-${{ matrix.target.test }}-
+            fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-
+            fuzz-corpus-${{ github.ref_name }}-
+            fuzz-corpus-
 
       - name: Run fuzzing
         id: fuzz
         continue-on-error: true
+        shell: bash
         run: |
+          set -o pipefail
           echo "Running ${{ matrix.target.test }} in ${{ matrix.target.package }}"
           go test ${{ matrix.target.package }} \
             -fuzz=^${{ matrix.target.test }}$ \
             -fuzztime=${{ matrix.target.time }} \
             -v 2>&1 | tee fuzz-output.log
-          
-          # Save exit code
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
       - name: Check for failures
         if: steps.fuzz.outputs.exit_code != '0'
@@ -163,15 +161,6 @@ jobs:
               labels: ['bug', 'fuzzing', 'automated']
             });
 
-      - name: Upload fuzz corpus artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fuzz-corpus-${{ matrix.target.test }}
-          path: |
-            **/testdata/fuzz
-          retention-days: 90
-
       - name: Upload failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
@@ -179,7 +168,7 @@ jobs:
           name: fuzz-failure-${{ matrix.target.test }}-${{ github.run_id }}
           path: |
             fuzz-output.log
-            **/testdata/fuzz
+            internal/**/testdata/fuzz/${{ matrix.target.test }}
           retention-days: 30
 
       - name: Parse fuzzing stats
