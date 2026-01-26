@@ -460,6 +460,7 @@ goldenthread is optimized for teams that:
 - [Architecture](docs/ARCHITECTURE.md) - System design and implementation details
 - [Testing Strategy](docs/TESTING.md) - Test suite and continuous fuzzing guide
 - [Fuzzing Bug Log](docs/FUZZING_BUGS.md) - Bugs discovered by continuous fuzzing
+- [Brand Guidelines](BRAND.md) - Trademark and logo usage
 - [Changelog](CHANGELOG.md) - Version history and changes
 
 ## Development
@@ -524,6 +525,6 @@ Dual-licensed under your choice of:
 
 Most users prefer MIT for simplicity. Apache 2.0 provides additional patent protections.
 
----
+## Trademarks
 
-**goldenthread** - Go structs to TypeScript validation, automatically.
+**Blackwell Systems™** and the **Blackwell Systems logo** are trademarks of Dayna Blackwell. You may use the name "Blackwell Systems" to refer to this project, but you may not use the name or logo in a way that suggests endorsement or official affiliation without prior written permission. See [BRAND.md](BRAND.md) for usage guidelines.
