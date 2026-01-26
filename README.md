@@ -11,7 +11,7 @@
 [![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 
-**goldenthread** generates type-safe validation schemas from Go struct definitions. Define your domain models once in Go with validation tags, and compile them into Zod schemas for TypeScript—automatically.
+**goldenthread** is a schema compiler that generates production-ready Zod validation from Go structs. Write validation rules once in Go tags, get type-safe TypeScript schemas automatically. No manual synchronization. No runtime overhead. Just code generation.
 
 ## Overview
 
