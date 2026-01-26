@@ -445,8 +445,36 @@ func (p *Parser) parseTokens(tagValue string) []tagToken {
 				}
 			} else {
 				// Check if this key allows comma-containing values
-				// Only "enum" needs this currently
-				if currentKey == "enum" {
+				// Both "enum" and "pattern" need special handling
+				if currentKey == "pattern" {
+					// For pattern, commas are ALWAYS part of the regex (e.g., {3,10})
+					// Only end pattern if what follows is a new token (has colon)
+					nextIsKey := false
+					if i+1 < len(tagValue) {
+						remaining := strings.TrimSpace(tagValue[i+1:])
+						if remaining != "" && strings.Contains(remaining, ":") {
+							colonIdx := strings.Index(remaining, ":")
+							commaIdx := strings.Index(remaining, ",")
+							// If colon comes before next comma (or no comma), it's a new key:value
+							if commaIdx == -1 || colonIdx < commaIdx {
+								nextIsKey = true
+							}
+						}
+					}
+
+					if nextIsKey {
+						// End the pattern token
+						if current.Len() > 0 {
+							tokens = append(tokens, p.makeToken(current.String()))
+							current.Reset()
+							currentKey = ""
+						}
+						inKeyValue = false
+					} else {
+						// Comma is part of pattern value
+						current.WriteByte(ch)
+					}
+				} else if currentKey == "enum" {
 					// For enum, a comma ends the value ONLY if what follows is clearly a new token
 					// New token = has a colon (key:value) OR has comma after it (flag,...)
 					nextIsKey := false
@@ -562,6 +590,7 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 	isNumeric := extractedType.Kind == schema.TypeInt ||
 		extractedType.Kind == schema.TypeUint ||
 		extractedType.Kind == schema.TypeFloat
+	isArray := extractedType.Kind == schema.TypeArray
 
 	var formatCount int
 	knownTokens := map[string]bool{
@@ -590,7 +619,7 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 				}
 			}
 
-			if err := p.applyRuleWithValidation(&rules, token.key, token.valueAfterColon, isString, isNumeric); err != nil {
+			if err := p.applyRuleWithValidation(&rules, token.key, token.valueAfterColon, isString, isNumeric, isArray); err != nil {
 				return rules, err
 			}
 		} else {
@@ -626,12 +655,12 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 }
 
 // applyRuleWithValidation applies a key:value rule with type checking.
-func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value string, isString, isNumeric bool) error {
+func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value string, isString, isNumeric, isArray bool) error {
 	switch key {
 	case "min":
-		if !isNumeric {
+		if !isNumeric && !isArray {
 			return &schema.ValidationError{
-				Message: "min rule only applies to numeric types",
+				Message: "min rule only applies to numeric or array types",
 			}
 		}
 		f := parseFloat(value)
@@ -642,9 +671,9 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 		}
 		rules.Min = f
 	case "max":
-		if !isNumeric {
+		if !isNumeric && !isArray {
 			return &schema.ValidationError{
-				Message: "max rule only applies to numeric types",
+				Message: "max rule only applies to numeric or array types",
 			}
 		}
 		f := parseFloat(value)
