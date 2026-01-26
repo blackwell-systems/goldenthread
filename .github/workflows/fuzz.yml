@@ -1,5 +1,6 @@
 name: Continuous Fuzzing
 
+# Runs every 30 minutes to continuously explore input space
 on:
   schedule:
     - cron: '*/30 * * * *'
