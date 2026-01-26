@@ -8,63 +8,63 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 
 ## Core Features
 
-### ✅ Parsing & Type Resolution
+### Parsing & Type Resolution
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Go struct parsing | ✅ Complete | Using go/packages + go/types |
-| Type inference | ✅ Complete | Full type resolution across packages |
-| Cross-package references | ✅ Complete | Handles imports and module paths |
-| Embedded struct flattening | ✅ Complete | Recursive with cycle detection |
-| Go field collision detection | ✅ Complete | Errors on duplicate Go field names |
-| JSON name collision detection | ✅ Complete | Prevents duplicate JSON keys (critical for API correctness) |
-| Pointer unwrapping | ✅ Complete | `*string` → optional string |
-| Documentation extraction | ✅ Complete | From Go comments to JSDoc |
-| Position tracking | ✅ Complete | File:line for error messages |
+| Go struct parsing | Complete | Using go/packages + go/types |
+| Type inference | Complete | Full type resolution across packages |
+| Cross-package references | Complete | Handles imports and module paths |
+| Embedded struct flattening | Complete | Recursive with cycle detection |
+| Go field collision detection | Complete | Errors on duplicate Go field names |
+| JSON name collision detection | Complete | Prevents duplicate JSON keys (critical for API correctness) |
+| Pointer unwrapping | Complete | `*string` → optional string |
+| Documentation extraction | Complete | From Go comments to JSDoc |
+| Position tracking | Complete | File:line for error messages |
 
-### ✅ Tag System
+### Tag System
 
 | Feature | Status | Syntax | Notes |
 |---------|--------|--------|-------|
-| Tag parsing | ✅ Complete | `gt:"token,key:value"` | Uses reflect.StructTag |
-| Required/optional | ✅ Complete | `required`, `optional` | 5-level precedence |
-| Fallback tags | ✅ Complete | `validate:`, `binding:` | Configurable |
-| Unknown token detection | ✅ Complete | Errors on typos | Fail-fast validation |
-| Conflict detection | ✅ Complete | Multiple formats, etc. | Clear error messages |
-| Tag specification | ✅ Complete | docs/TAG_SPEC.md | Canonical contract |
+| Tag parsing | Complete | `gt:"token,key:value"` | Uses reflect.StructTag |
+| Required/optional | Complete | `required`, `optional` | 5-level precedence |
+| Fallback tags | Complete | `validate:`, `binding:` | Configurable |
+| Unknown token detection | Complete | Errors on typos | Fail-fast validation |
+| Conflict detection | Complete | Multiple formats, etc. | Clear error messages |
+| Tag specification | Complete | docs/TAG_SPEC.md | Canonical contract |
 
-### ✅ CLI Tool
+### CLI Tool
 
 | Feature | Status | Command | Notes |
 |---------|--------|---------|-------|
-| Generate command | ✅ Complete | `generate <dir>` | Outputs TypeScript schemas |
-| Recursive generation | ✅ Complete | `--recursive` flag | Processes subdirectories |
-| Output directory | ✅ Complete | `--out <dir>` | Custom output location |
-| Check command | ✅ Complete | `check <dir>` | Drift detection |
-| Metadata tracking | ✅ Complete | `.goldenthread.json` | Hash-based versioning |
-| Exit codes | ✅ Complete | 0=success, 1=drift/error | CI-friendly |
-| Help text | ✅ Complete | `--help` | Usage documentation |
+| Generate command | Complete | `generate <dir>` | Outputs TypeScript schemas |
+| Recursive generation | Complete | `--recursive` flag | Processes subdirectories |
+| Output directory | Complete | `--out <dir>` | Custom output location |
+| Check command | Complete | `check <dir>` | Drift detection |
+| Metadata tracking | Complete | `.goldenthread.json` | Hash-based versioning |
+| Exit codes | Complete | 0=success, 1=drift/error | CI-friendly |
+| Help text | Complete | `--help` | Usage documentation |
 
-### ✅ Code Generation
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Zod emitter | ✅ Complete | Target: TypeScript + Zod |
-| Type inference export | ✅ Complete | `export type T = z.infer<...>` |
-| JSDoc comments | ✅ Complete | Preserves Go documentation |
-| Source attribution | ✅ Complete | File:line in generated header |
-| Deterministic output | ✅ Complete | Sorted for stable diffs |
-| Single-file per schema | ✅ Complete | `user.ts`, `product.ts`, etc. |
-
-### ✅ Schema Normalization
+### Code Generation
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Schema registry | ✅ Complete | Package-aware type lookups |
-| Two-pass normalization | ✅ Complete | Register → flatten |
-| Embedded field promotion | ✅ Complete | Flattens anonymous structs |
-| Cycle detection | ✅ Complete | Prevents infinite recursion |
-| Collision validation | ✅ Complete | Go names before, JSON names after flattening |
+| Zod emitter | Complete | Target: TypeScript + Zod |
+| Type inference export | Complete | `export type T = z.infer<...>` |
+| JSDoc comments | Complete | Preserves Go documentation |
+| Source attribution | Complete | File:line in generated header |
+| Deterministic output | Complete | Sorted for stable diffs |
+| Single-file per schema | Complete | `user.ts`, `product.ts`, etc. |
+
+### Schema Normalization
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Schema registry | Complete | Package-aware type lookups |
+| Two-pass normalization | Complete | Register → flatten |
+| Embedded field promotion | Complete | Flattens anonymous structs |
+| Cycle detection | Complete | Prevents infinite recursion |
+| Collision validation | Complete | Go names before, JSON names after flattening |
 
 ## Type Support
 
@@ -72,50 +72,50 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 
 | Go Type | Zod Output | Status | Notes |
 |---------|-----------|--------|-------|
-| `string` | `z.string()` | ✅ Complete | With validation rules |
-| `int`, `int8`, `int16`, `int32`, `int64` | `z.number()` | ✅ Complete | All signed integer types |
-| `uint`, `uint8`, `uint16`, `uint32`, `uint64` | `z.number()` | ✅ Complete | All unsigned integer types |
-| `float32`, `float64` | `z.number()` | ✅ Complete | Floating-point numbers |
-| `bool` | `z.boolean()` | ✅ Complete | Boolean values |
-| `time.Time` | `z.string().datetime()` | ✅ Complete | ISO 8601 datetime |
-| `[]T` | `z.array(T)` | ✅ Complete | Arrays with element type |
-| `map[string]T` | `z.record(z.string(), T)` | ✅ Complete | String-keyed maps |
-| `struct { ... }` | `z.object({...})` | ✅ Complete | Inline nested objects |
-| Named struct | `TypeSchema` | ✅ Complete | References to other schemas |
-| Embedded struct | Fields flattened | ✅ Complete | Automatic field promotion |
-| `*T` (pointer) | `T.optional()` | ✅ Complete | Pointer = optional semantics |
-| `map[K]V` | `z.record(K, V)` | ✅ Complete | Maps with any key/value type |
-| `interface{}`, `any` | `z.any()` | ✅ Complete | Fallback for unknown types |
+| `string` | `z.string()` | Complete | With validation rules |
+| `int`, `int8`, `int16`, `int32`, `int64` | `z.number()` | Complete | All signed integer types |
+| `uint`, `uint8`, `uint16`, `uint32`, `uint64` | `z.number()` | Complete | All unsigned integer types |
+| `float32`, `float64` | `z.number()` | Complete | Floating-point numbers |
+| `bool` | `z.boolean()` | Complete | Boolean values |
+| `time.Time` | `z.string().datetime()` | Complete | ISO 8601 datetime |
+| `[]T` | `z.array(T)` | Complete | Arrays with element type |
+| `map[string]T` | `z.record(z.string(), T)` | Complete | String-keyed maps |
+| `struct { ... }` | `z.object({...})` | Complete | Inline nested objects |
+| Named struct | `TypeSchema` | Complete | References to other schemas |
+| Embedded struct | Fields flattened | Complete | Automatic field promotion |
+| `*T` (pointer) | `T.optional()` | Complete | Pointer = optional semantics |
+| `map[K]V` | `z.record(K, V)` | Complete | Maps with any key/value type |
+| `interface{}`, `any` | `z.any()` | Complete | Fallback for unknown types |
 
 ### Validation Rules
 
 | Rule | Tag Syntax | Zod Output | Status |
 |------|-----------|-----------|--------|
 | **Presence** | | | |
-| Required | `required` | (omit `.optional()`) | ✅ Complete |
-| Optional | `optional` | `.optional()` | ✅ Complete |
+| Required | `required` | (omit `.optional()`) | Complete |
+| Optional | `optional` | `.optional()` | Complete |
 | **String** | | | |
-| Min length | `len:3..` or `min:3` | `.min(3)` | ✅ Complete |
-| Max length | `len:..20` or `max:20` | `.max(20)` | ✅ Complete |
-| Length range | `len:3..20` | `.min(3).max(20)` | ✅ Complete |
-| Regex pattern | `pattern:^[a-z]+$` | `.regex(/^[a-z]+$/)` | ✅ Complete |
+| Min length | `len:3..` or `min:3` | `.min(3)` | Complete |
+| Max length | `len:..20` or `max:20` | `.max(20)` | Complete |
+| Length range | `len:3..20` | `.min(3).max(20)` | Complete |
+| Regex pattern | `pattern:^[a-z]+$` | `.regex(/^[a-z]+$/)` | Complete |
 | **Formats** | | | |
-| Email | `email` | `.email()` | ✅ Complete |
-| URL | `url` | `.url()` | ✅ Complete |
-| UUID | `uuid` | `.uuid()` | ✅ Complete |
-| Date | `date` | `.regex(/^\d{4}-\d{2}-\d{2}$/)` | ✅ Complete |
-| DateTime | `datetime` | `.datetime()` | ✅ Complete |
-| IPv4 | `ipv4` | `.ip({ version: 'v4' })` | ✅ Complete |
-| IPv6 | `ipv6` | `.ip({ version: 'v6' })` | ✅ Complete |
+| Email | `email` | `.email()` | Complete |
+| URL | `url` | `.url()` | Complete |
+| UUID | `uuid` | `.uuid()` | Complete |
+| Date | `date` | `.regex(/^\d{4}-\d{2}-\d{2}$/)` | Complete |
+| DateTime | `datetime` | `.datetime()` | Complete |
+| IPv4 | `ipv4` | `.ip({ version: 'v4' })` | Complete |
+| IPv6 | `ipv6` | `.ip({ version: 'v6' })` | Complete |
 | **Numeric** | | | |
-| Min value | `min:0` | `.min(0)` | ✅ Complete |
-| Max value | `max:100` | `.max(100)` | ✅ Complete |
+| Min value | `min:0` | `.min(0)` | Complete |
+| Max value | `max:100` | `.max(100)` | Complete |
 | **Array** | | | |
-| Min items | `min:1` | `.min(1)` | ✅ Complete |
-| Max items | `max:10` | `.max(10)` | ✅ Complete |
+| Min items | `min:1` | `.min(1)` | Complete |
+| Max items | `max:10` | `.max(10)` | Complete |
 | Unique items | `unique` | - | ⚠️ Parsed, not emitted |
 | **Enum** | | | |
-| Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | ✅ Complete | Values with underscores supported |
+| Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | Complete | Values with underscores supported |
 | **Custom** | | | |
 | Custom validators | `validator:funcName` | - | ⚠️ Parsed, not emitted |
 
@@ -123,12 +123,12 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| SHA-256 hashing | ✅ Complete | Deterministic schema fingerprints |
-| Metadata file | ✅ Complete | `.goldenthread.json` tracking |
-| Version tracking | ✅ Complete | goldenthread version in metadata |
-| Change detection | ✅ Complete | Compares hash of source vs metadata |
-| CI integration | ✅ Complete | Exit code 1 on drift |
-| Change reporting | ✅ Complete | Shows which schemas changed |
+| SHA-256 hashing | Complete | Deterministic schema fingerprints |
+| Metadata file | Complete | `.goldenthread.json` tracking |
+| Version tracking | Complete | goldenthread version in metadata |
+| Change detection | Complete | Compares hash of source vs metadata |
+| CI integration | Complete | Exit code 1 on drift |
+| Change reporting | Complete | Shows which schemas changed |
 
 ## Advanced Features
 
