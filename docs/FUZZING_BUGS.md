@@ -41,14 +41,14 @@ type 日本語 struct {
 
 ```javascript
 export const 日本語Schema = z.object({
-  �\x83\x95ィールド: z.string()  // ❌ Invalid UTF-8
+  �\x83\x95ィールド: z.string()  // Invalid UTF-8
 })
 ```
 
 Expected:
 ```javascript
 export const 日本語Schema = z.object({
-  フィールド: z.string()  // ✅ Valid UTF-8
+  フィールド: z.string()  // Valid UTF-8
 })
 ```
 
@@ -149,14 +149,14 @@ type User struct {
 ```javascript
 export const UserSchema = z.object({
   name: z.string().regex(/
-/)  // ❌ Regex broken across lines - syntax error
+/)  // Regex broken across lines - syntax error
 })
 ```
 
 Expected:
 ```javascript
 export const UserSchema = z.object({
-  name: z.string().regex(/\n/)  // ✅ Escaped newline
+  name: z.string().regex(/\n/)  // Escaped newline
 })
 ```
 
