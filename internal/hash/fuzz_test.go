@@ -147,7 +147,8 @@ func FuzzComputeSchemaHash_TypeChanges(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, kind1, kind2 int8) {
 		// Limit to valid TypeKind range (0-13)
-		if kind1 < 0 || kind1 > 13 || kind2 < 0 || kind2 > 13 {
+		// Valid TypeKind range: 0 (TypeString) to 11 (TypeAny)
+		if kind1 < 0 || kind1 > 11 || kind2 < 0 || kind2 > 11 {
 			return
 		}
 
