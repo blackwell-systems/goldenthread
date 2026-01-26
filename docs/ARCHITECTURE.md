@@ -678,62 +678,6 @@ For 1000 schemas: ~2MB total.
 
 No memory concerns. `go/packages` memory overhead is larger but handled by Go runtime.
 
-## Comparison with Alternatives
-
-### vs Runtime Reflection
-
-**goldenthread** (build-time):
-- ✅ Zero runtime overhead
-- ✅ Type-safe generated code
-- ✅ Works with static TypeScript bundles
-- ✅ Frontend doesn't need Go server
-
-**Reflection-based** (runtime):
-- ❌ Runtime performance cost
-- ❌ Cannot generate TypeScript at build time
-- ❌ Requires Go server for validation
-- ❌ Network round-trip for validation
-
-### vs OpenAPI-First
-
-**goldenthread** (code-first):
-- ✅ Go structs are source of truth
-- ✅ No separate schema files to maintain
-- ✅ Type-safe in Go compiler
-- ✅ Validation rules colocated with code
-
-**OpenAPI-first** (schema-first):
-- ❌ YAML/JSON as source of truth
-- ❌ Go code generated from schemas (backward)
-- ❌ Lose Go's type system benefits
-- ❌ Validation rules separated from code
-
-### vs Manual Sync
-
-**goldenthread** (automated):
-- ✅ Single command regenerates everything
-- ✅ CI detects drift automatically
-- ✅ Impossible to forget to update frontend
-- ✅ Hash-based change detection
-
-**Manual** (error-prone):
-- ❌ Must update Go, TypeScript, docs separately
-- ❌ Easy to forget
-- ❌ No automated drift detection
-- ❌ Tests are only safety net
-
-### vs tygo/typescriptify
-
-**goldenthread**:
-- ✅ Generates validation (Zod), not just types
-- ✅ Runtime safety with schema validation
-- ✅ Drift detection built-in
-
-**tygo/typescriptify**:
-- ❌ Only generates TypeScript interfaces
-- ❌ No validation logic
-- ❌ No CI integration
-
 ## Summary
 
 goldenthread is designed as a **compiler, not a library**. It transforms Go domain models into TypeScript validation code using a five-stage pipeline:
