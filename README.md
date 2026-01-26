@@ -1,6 +1,6 @@
 # goldenthread
 
-> A schema compiler that generates TypeScript/Zod validation from Go structs.
+> Schema compiler: Go structs → TypeScript/Zod. Keep backend/frontend validation in sync automatically.
 
 [![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems) 
 [![Go Reference](https://pkg.go.dev/badge/github.com/blackwell-systems/goldenthread.svg)](https://pkg.go.dev/github.com/blackwell-systems/goldenthread) 
