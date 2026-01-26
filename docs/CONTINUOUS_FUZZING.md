@@ -12,32 +12,32 @@ goldenthread runs **12 fuzz targets every 30 minutes** (48 times per day), testi
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Every 30 Minutes (GitHub Actions Scheduled Workflow)       │
+│ Every 30 Minutes (GitHub Actions Scheduled Workflow)        │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Load Corpus from Cache                                   │
-│    - testdata/fuzz/*/corpus (from previous runs)           │
+│    - testdata/fuzz/*/corpus (from previous runs)            │
 │    - Each corpus contains discovered interesting inputs     │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ 2. Run 12 Fuzz Targets in Parallel (10 minutes each)      │
+│ 2. Run 12 Fuzz Targets in Parallel (10 minutes each)        │
 │                                                             │
-│    Parser:                      Emitter:                   │
-│    • FuzzParsePackages          • FuzzEmit                │
-│    • FuzzNormalizeDoc           • FuzzEmitFieldName       │
-│                                 • FuzzEmitValidation      │
-│    Hash:                        • FuzzEmitPattern         │
-│    • FuzzComputeSchemaHash      • FuzzEmitEnum           │
-│    • FuzzComputeSchemaHash_     Hash:                      │
-│      Stability                  • (5 total targets)       │
-│    • FuzzComputeSchemaHash_                               │
-│      TypeChanges                                          │
-│    • FuzzComputeSchemaHash_                               │
-│      FieldOrder                                           │
-│    • FuzzComputeSchemaHash_                               │
-│      OptionalChange                                       │
+│    Parser:                      Emitter:                    │
+│    • FuzzParsePackages          • FuzzEmit                  │
+│    • FuzzNormalizeDoc           • FuzzEmitFieldName         │
+│                                 • FuzzEmitValidation        │
+│    Hash:                        • FuzzEmitPattern           │
+│    • FuzzComputeSchemaHash      • FuzzEmitEnum              │
+│    • FuzzComputeSchemaHash_     Hash:                       │
+│      Stability                  • (5 total targets)         │
+│    • FuzzComputeSchemaHash_                                 │
+│      TypeChanges                                            │
+│    • FuzzComputeSchemaHash_                                 │
+│      FieldOrder                                             │
+│    • FuzzComputeSchemaHash_                                 │
+│      OptionalChange                                         │
 └─────────────────────────────────────────────────────────────┘
                             ↓
                     ┌───────────────┐
