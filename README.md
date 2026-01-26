@@ -50,16 +50,20 @@ Changes to Go structs regenerate TypeScript schemas automatically. The compiler 
 
 ## Features
 
-### Core Capabilities
+**goldenthread generates production-ready Zod schemas with complete type safety.**
 
-- **Go structs as source of truth**: Define validation rules once in struct tags
-- **Zod schema generation**: Automatic TypeScript/Zod output with proper types
-- **Comprehensive validation**: String length, numeric bounds, formats (email, UUID, URL), patterns, enums
-- **Type safety**: Go types map correctly to Zod types (primitives, arrays, maps, nested objects)
-- **Embedded struct flattening**: Anonymous fields automatically promoted
-- **Collision detection**: Prevents duplicate JSON field names at compile time
-- **Drift detection**: `check` command verifies schemas stay in sync
-- **Zero runtime overhead**: Pure code generation, no reflection
+### What You Get
+
+- **Full Go type support**: Primitives, arrays, maps, enums, nested objects, pointers
+- **Comprehensive validation**: Length bounds, numeric ranges, regex patterns, format validators (email, UUID, URL, IPv4/IPv6, datetime)
+- **Enum generation**: `z.enum(['pending', 'completed'])` from Go string fields
+- **Map support**: `z.record(z.string(), T)` for Go maps
+- **Array validation**: Min/max length constraints
+- **Nested objects**: Type-safe references to other schemas
+- **Embedded struct flattening**: Anonymous fields promoted automatically
+- **Collision detection**: Duplicate JSON keys caught at compile time (not runtime)
+- **Drift detection**: `goldenthread check` fails CI if schemas out of sync
+- **Zero runtime overhead**: Pure code generation, no reflection, no magic
 
 ### Validation Rules
 
