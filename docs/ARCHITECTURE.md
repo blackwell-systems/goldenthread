@@ -16,6 +16,95 @@ The current implementation focuses on the core use case: **generating Zod schema
 
 ## System Components
 
+```mermaid
+flowchart TB
+    subgraph input["Input Layer"]
+        gosrc[Go Source Files<br/>with gt: tags]
+        gomod[go.mod<br/>Module Context]
+    end
+    
+    subgraph loader["Package Loading"]
+        gopkg[go/packages<br/>Type-aware loading]
+        gotypes[go/types<br/>Type resolution]
+    end
+    
+    subgraph parser["Parser Layer"]
+        ast[AST Walker<br/>Find exported structs]
+        extract[Tag Extraction<br/>gt: and json: tags]
+        resolve[Type Resolution<br/>Cross-package refs]
+    end
+    
+    subgraph ir["Intermediate Representation"]
+        schema[Schema IR<br/>Language-agnostic]
+        field[Field Types<br/>Validation Rules]
+    end
+    
+    subgraph normalize["Normalization"]
+        flatten[Flatten<br/>Embedded structs]
+        collide[Detect<br/>Name collisions]
+        validate[Semantic<br/>Validation]
+    end
+    
+    subgraph hash["Hash/Drift"]
+        sha[SHA-256<br/>Schema hash]
+        meta[.goldenthread.json<br/>Metadata tracking]
+    end
+    
+    subgraph emit["Emitter Layer"]
+        codegen[Code Generation<br/>Zod schemas]
+        format[TypeScript<br/>Formatting]
+        types[Type Inference<br/>z.infer export]
+    end
+    
+    subgraph output["Output Layer"]
+        ts[Generated .ts Files<br/>Zod schemas]
+        metadata[Metadata File<br/>Drift detection]
+    end
+    
+    subgraph ci["CI Integration"]
+        check[goldenthread check<br/>Verify sync]
+        drift[Exit Code<br/>0=sync 1=drift]
+    end
+    
+    gosrc --> gopkg
+    gomod --> gopkg
+    gopkg --> gotypes
+    gotypes --> ast
+    
+    ast --> extract
+    extract --> resolve
+    resolve --> schema
+    schema --> field
+    
+    field --> flatten
+    flatten --> collide
+    collide --> validate
+    
+    validate --> sha
+    sha --> meta
+    
+    validate --> codegen
+    codegen --> format
+    format --> types
+    
+    types --> ts
+    meta --> metadata
+    
+    metadata --> check
+    sha --> check
+    check --> drift
+    
+    style input fill:#3A4A5C,stroke:#6b7280,color:#f0f0f0
+    style loader fill:#3A4C43,stroke:#6b7280,color:#f0f0f0
+    style parser fill:#3A4A5C,stroke:#6b7280,color:#f0f0f0
+    style ir fill:#4C4538,stroke:#6b7280,color:#f0f0f0
+    style normalize fill:#3A4C43,stroke:#6b7280,color:#f0f0f0
+    style hash fill:#4C3A3C,stroke:#6b7280,color:#f0f0f0
+    style emit fill:#3A4A5C,stroke:#6b7280,color:#f0f0f0
+    style output fill:#3A4C43,stroke:#6b7280,color:#f0f0f0
+    style ci fill:#4C3A3C,stroke:#6b7280,color:#f0f0f0
+```
+
 ### 1. Parser (`internal/parser`)
 
 **Responsibility**: Extract schema definitions from Go source code with full type resolution.
