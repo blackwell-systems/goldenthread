@@ -549,8 +549,8 @@ Both bugs were in code paths covered by unit tests, but the unit tests didn't ex
 ### Resource Usage
 
 **GitHub Actions Free Tier (Public Repos):**
-- Unlimited minutes ✓
-- 20 concurrent jobs ✓
+- Unlimited minutes
+- 20 concurrent jobs
 - 500MB artifact storage
 
 **goldenthread fuzzing:**
