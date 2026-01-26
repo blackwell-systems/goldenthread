@@ -226,20 +226,38 @@ The corpus is cached between runs using GitHub Actions cache:
   uses: actions/cache@v4
   with:
     path: |
-      internal/emitter/zod/testdata/fuzz/*/corpus
-      internal/hash/testdata/fuzz/*/corpus
-      internal/parser/testdata/fuzz/*/corpus
-    key: fuzz-corpus-${{ github.sha }}
-    restore-keys: fuzz-corpus-
+      internal/**/testdata/fuzz/**/corpus
+    # Key on branch + target so corpus persists across commits
+    key: fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-${{ matrix.target.test }}
+    restore-keys: |
+      fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-
+      fuzz-corpus-${{ github.ref_name }}-
+      fuzz-corpus-
 ```
 
 **How it works:**
-1. Restore corpus from previous run (or start with seeds if first run)
+1. Restore corpus from previous run using branch-based key (persists across commits)
 2. Run fuzzing for 10 minutes (adds new inputs to corpus)
 3. Save updated corpus to cache for next run
 4. Next run starts with the improved corpus
 
-**Result:** The corpus compounds over time, getting more effective with each run.
+**Critical:** Cache key uses `github.ref_name` (branch name) instead of `github.sha` (commit). This ensures the corpus persists even when you push new commits, enabling true continuous growth.
+
+### Exit Code Capture
+
+Critical detail for detecting failures:
+
+```yaml
+- name: Run fuzzing
+  id: fuzz
+  shell: bash
+  run: |
+    set -o pipefail
+    go test ... -v 2>&1 | tee fuzz-output.log
+    echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+```
+
+**Why this matters:** When using pipes with `tee`, `$?` returns the exit code of `tee` (always 0), not `go test`. Using `${PIPESTATUS[0]}` captures the exit code of the first command in the pipeline (`go test`), ensuring failures are actually detected.
 
 ## Automatic Issue Creation
 
