@@ -435,7 +435,7 @@ Exit codes:
 - Conditional rules
 - Multiple validation sets per struct
 
-These limitations are intentional for v0.1. The tool does **one thing well**: generate Zod schemas from struct tags. Future versions may expand scope based on real-world usage.
+These limitations are intentional for v0.1. The tool does **one thing well**: generate type-safe Zod schemas from Go structs (including primitives, enums, arrays, maps, and nested objects). Future versions may expand scope based on real-world usage.
 
 </details>
 
