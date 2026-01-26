@@ -65,12 +65,12 @@ jobs:
           go-version: '1.25.6'
           cache: true
 
+      # Go fuzz corpora live under testdata/fuzz/<FuzzFunc>/...
       - name: Restore fuzz corpus cache
         uses: actions/cache@v4
         with:
           path: |
-            internal/**/testdata/fuzz/**/corpus
-          # Key on branch + target so corpus persists across commits
+            **/testdata/fuzz
           key: fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-${{ matrix.target.test }}
           restore-keys: |
             fuzz-corpus-${{ github.ref_name }}-${{ matrix.target.package }}-
@@ -111,9 +111,10 @@ jobs:
             const fs = require('fs');
             const output = fs.readFileSync('fuzz-output.log', 'utf8');
             
-            // Extract failure details
+            // Go prints: "Failing input written to testdata/fuzz/<FuzzFunc>/<hash>"
             const caseMatch = output.match(/Failing input written to testdata\/fuzz\/([^/]+\/[a-f0-9]+)/);
             const caseId = caseMatch ? caseMatch[1] : 'unknown';
+            const caseHash = caseId.includes('/') ? caseId.split('/').pop() : caseId;
             const testName = '${{ matrix.target.test }}';
             const pkg = '${{ matrix.target.package }}';
             
@@ -132,7 +133,7 @@ jobs:
             ### How to Reproduce
             
             \`\`\`bash
-            go test ${pkg} -run=${testName}/${caseId.split('/')[1]} -v
+            go test ${pkg} -run=${testName}/${caseHash} -v
             \`\`\`
             
             ### Artifacts
@@ -168,7 +169,7 @@ jobs:
           name: fuzz-failure-${{ matrix.target.test }}-${{ github.run_id }}
           path: |
             fuzz-output.log
-            internal/**/testdata/fuzz/${{ matrix.target.test }}
+            **/testdata/fuzz
           retention-days: 30
 
       - name: Parse fuzzing stats
