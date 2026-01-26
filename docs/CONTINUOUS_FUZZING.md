@@ -991,16 +991,3 @@ Look for:
 Continuous fuzzing transforms testing from a one-time activity into an ongoing process. The system runs 24/7, explores billions of inputs, compounds its knowledge over time, and automatically reports bugs with reproduction steps.
 
 goldenthread's fuzzing system found 2 production bugs before release and continues to run every 30 minutes, protecting against future regressions and discovering edge cases as the codebase evolves.
-
-**Key takeaways:**
-
-1. Fuzzing explores input combinations humans wouldn't think to test
-2. Coverage-guided fuzzing focuses on new code paths (efficient exploration)
-3. Corpus evolution creates compound growth (gets smarter over time)
-4. Automatic issue creation makes fuzzing actionable (no manual monitoring)
-5. Free for open source (GitHub Actions unlimited minutes)
-
-**Setup time:** 2 hours (write fuzz targets, configure workflow)
-**Maintenance time:** 0 hours (fully automated)
-**Bugs found:** 2 before release, continuous discovery ongoing
-**ROI:** Infinite (prevented production bugs with zero ongoing cost)
