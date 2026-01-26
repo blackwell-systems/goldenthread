@@ -404,7 +404,8 @@ Exit codes:
 
 ## Current Limitations
 
-goldenthread v0.1 focuses on the core use case: struct validation for APIs and forms. The following are **not yet supported**:
+<details>
+<summary>goldenthread v0.1 focuses on the core use case: struct validation for APIs and forms. Click to see what's not yet supported.</summary>
 
 ### Type System
 
@@ -435,6 +436,8 @@ goldenthread v0.1 focuses on the core use case: struct validation for APIs and f
 - Multiple validation sets per struct
 
 These limitations are intentional for v0.1. The tool does **one thing well**: generate Zod schemas from struct tags. Future versions may expand scope based on real-world usage.
+
+</details>
 
 ## Comparison with Alternatives
 
