@@ -192,33 +192,25 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 
 ### Pipeline Components
 
-1. **Parser** (`internal/parser`)
-   - Uses `go/packages` and `go/types` for proper type resolution
-   - Extracts struct definitions with `gt:` tags
-   - Validates tag syntax and conflicts
-   - Handles embedded structs, cross-package references
+**1. Parser** (`internal/parser`)
 
-2. **Intermediate Representation** (`internal/schema`)
-   - Language-agnostic schema format
-   - Separates parsing from code generation
-   - Enables future emitters (OpenAPI, JSON Schema, etc.)
+Uses `go/packages` and `go/types` for proper type resolution. Extracts struct definitions with `gt:` tags, validates tag syntax and conflicts, handles embedded structs and cross-package references.
 
-3. **Normalization** (`internal/normalize`)
-   - Flattens embedded struct fields
-   - Detects Go field name collisions
-   - Validates JSON name collisions
-   - Ensures schema correctness
+**2. Intermediate Representation** (`internal/schema`)
 
-4. **Emitter** (`internal/emitter/zod`)
-   - Generates TypeScript with Zod schemas
-   - Preserves Go documentation as JSDoc
-   - Emits type-safe `z.infer<>` types
-   - Deterministic output for stable diffs
+Language-agnostic schema format that separates parsing from code generation. Enables future emitters (OpenAPI, JSON Schema, etc.) without modifying the parser.
 
-5. **Hash/Drift Detection** (`internal/hash`)
-   - SHA-256 hashing of schema content
-   - Metadata tracking (`.goldenthread.json`)
-   - Detects when source and generated diverge
+**3. Normalization** (`internal/normalize`)
+
+Flattens embedded struct fields, detects Go field name collisions, validates JSON name collisions, ensures schema correctness before emission.
+
+**4. Emitter** (`internal/emitter/zod`)
+
+Generates TypeScript with Zod schemas. Preserves Go documentation as JSDoc, emits type-safe `z.infer<>` types, produces deterministic output for stable diffs.
+
+**5. Hash/Drift Detection** (`internal/hash`)
+
+SHA-256 hashing of schema content with metadata tracking (`.goldenthread.json`). Detects when source and generated code diverge.
 
 ## Supported Types
 
