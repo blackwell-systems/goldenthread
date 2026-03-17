@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **TAG_SPEC.md** — added array `min`/`max` rows to parsing table; added Fallback Tags section
+  documenting `validate:` tag fallback behavior
+- **DESIGN.md** — corrected array rule syntax (`minitems`/`maxitems` → `min`/`max`); removed
+  `unique` from array rules block (partially implemented, documented in FEATURES.md)
+- **FEATURES.md** — clarified `unique` tag is a no-op in generated Zod output in v0.1;
+  moved OpenAPI 3.1 and JSON Schema emitters from "Out of Scope" to "Planned (v0.3)"
+- **README.md** — documented `init` command as unimplemented, planned for v0.2
+- **ROADMAP.md** — added "Status: Planned" callout to `goldenthread init --wails` section
+- **examples/basic/EXPECTED_OUTPUT.md** — fixed output filenames (`.schema.ts` → `.ts`);
+  removed phantom `user.types.ts` section (only one file is generated per schema)
+
 ### Fixed
 
 - **Array `min`/`max` constraints now correctly emitted** — `gt:"min:N"` and `gt:"max:N"`
