@@ -1,0 +1,451 @@
+completion_date: "2026-03-16"
+title: Documentation Quality Fixes
+feature_slug: doc-quality-fixes
+verdict: SUITABLE
+test_command: go test ./...
+lint_command: go vet ./...
+file_ownership:
+    - file: README.md
+      agent: A
+      wave: 1
+      action: modify
+    - file: ROADMAP.md
+      agent: B
+      wave: 1
+      action: modify
+    - file: docs/DESIGN.md
+      agent: C
+      wave: 1
+      action: modify
+    - file: docs/TAG_SPEC.md
+      agent: D
+      wave: 1
+      action: modify
+    - file: docs/FEATURES.md
+      agent: E
+      wave: 1
+      action: modify
+    - file: examples/basic/EXPECTED_OUTPUT.md
+      agent: F
+      wave: 1
+      action: modify
+interface_contracts: []
+waves:
+    - number: 1
+      agents:
+        - id: A
+          task: |
+            ## What to Fix
+            README.md currently has no mention of the `init` command being unimplemented.
+            The `initialize()` function in `cmd/goldenthread/main.go` is a stub that prints
+            a placeholder message and returns nil. README.md implicitly treats all CLI
+            commands as complete. Add a note clarifying that `init` (and specifically
+            `goldenthread init --wails`) is planned for v0.2 and not yet available.
+
+            ## Specific Change
+            In the CLI Commands section of README.md (around line 370-395), the `generate`
+            and `check` commands are documented. The `init` command appears in the usage
+            help text (`printUsage()` in main.go) but is NOT documented in the README's
+            CLI reference section.
+
+            Add a subsection for `init` under CLI Commands that clearly states:
+
+            ```
+            ### `init` _(planned for v0.2)_
+
+            Initialize goldenthread configuration for a project.
+
+            > **Note:** This command is not yet implemented. `goldenthread init --wails`
+            > (Wails project auto-setup) is planned for v0.2. Running `goldenthread init`
+            > currently prints a placeholder message.
+            ```
+
+            Do NOT remove references to init from the printUsage help text — that is source
+            code and out of scope.
+
+            ## Files to Touch
+            - README.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm the word "placeholder"
+            or "v0.2" appears near "init" in the updated README.
+
+            ## Constraints
+            - Do not modify any .go files
+            - Do not remove or rewrite existing CLI documentation for generate/check
+            - Match the existing markdown style (### headers, code fences, badge rows)
+          files:
+            - README.md
+        - id: B
+          task: |
+            ## What to Fix
+            ROADMAP.md describes `goldenthread init --wails` with full feature detail
+            (auto-detect wails.json, inject pre-build hook, etc.) under v0.2 without
+            any indication that the command is currently a stub. Readers consulting
+            ROADMAP.md would not know that `init` is unimplemented today.
+
+            ## Specific Change
+            In ROADMAP.md, under the `## v0.2 — Wails Integration` section, find the
+            `### goldenthread init --wails` subsection (around line 15-21). Add a
+            status callout immediately after the subsection heading, before the bullet
+            list, making it clear this is planned work and not yet shipped:
+
+            ```
+            > **Status: Planned.** This command is not yet implemented. The current
+            > `goldenthread init` is a stub. Full Wails integration is the v0.2 milestone.
+            ```
+
+            Do not alter the bullet list describing the planned features — those bullets
+            correctly describe the target behavior for v0.2.
+
+            ## Files to Touch
+            - ROADMAP.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm a "Status: Planned" or
+            "not yet implemented" note appears in the init --wails section.
+
+            ## Constraints
+            - Do not modify any .go files
+            - Do not remove planned feature descriptions — only add the status callout
+            - Match existing ROADMAP.md markdown style (blockquotes use `>`)
+          files:
+            - ROADMAP.md
+        - id: C
+          task: |
+            ## What to Fix
+            DESIGN.md lines 148-150 show array rules using invalid tag syntax:
+
+            ```go
+            `gt:"minitems:1"`        // Minimum array length
+            `gt:"maxitems:10"`       // Maximum array length
+            `gt:"unique"`            // All items must be unique
+            ```
+
+            The parser (internal/parser/parser.go) does NOT recognize `minitems` or
+            `maxitems` as valid tokens. It only recognizes `min:N` and `max:N`, which
+            apply to both numeric and array types (parser.go:660-685). Using `minitems`
+            or `maxitems` would trigger the "unknown token → error" policy (TAG_SPEC.md).
+
+            The `unique` tag IS parsed (UniqueItems bool in schema.go:171) but is not
+            emitted by the Zod emitter. It is a partially-implemented feature.
+
+            ## Specific Changes
+
+            Replace the Array Rules code block in DESIGN.md (the "#### Array Rules"
+            subsection under "Tag Syntax Design → Supported Rules") with:
+
+            ```go
+            `gt:"min:1"`             // Minimum array length
+            `gt:"max:10"`            // Maximum array length
+            ```
+
+            Remove the `unique` line from this code block entirely. The `unique` tag's
+            partial status is documented in FEATURES.md and TAG_SPEC.md — DESIGN.md
+            should not list it as a first-class array rule in the syntax reference.
+
+            ## Files to Touch
+            - docs/DESIGN.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm `minitems` and
+            `maxitems` no longer appear in DESIGN.md after the edit.
+
+            ## Constraints
+            - Do not modify any .go files
+            - Only change the Array Rules code block — do not rewrite surrounding prose
+            - Do not remove the entire Array Rules subsection
+          files:
+            - docs/DESIGN.md
+        - id: D
+          task: |
+            ## What to Fix
+            TAG_SPEC.md is missing two categories of documentation:
+
+            ### 1. Array min/max rows in the Parsing Table
+            The canonical parsing table (## Parsing Table section) has rows for
+            `min:N` and `max:N` that say "Applies to: numeric". But the parser
+            (internal/parser/parser.go:661,674) also accepts `min:N`/`max:N` on
+            array types. There are no array-specific rows in the table.
+
+            Add two rows to the Parsing Table for array min/max. Insert them after
+            the existing `max:N` numeric row:
+
+            | `min:N` | kv | array | `Rules.Min` | error if non-array/non-numeric type |
+            | `max:N` | kv | array | `Rules.Max` | error if non-array/non-numeric type |
+
+            Note: The existing `min:N` and `max:N` numeric rows already exist — add
+            separate rows clarifying array applicability, OR update the existing rows'
+            "Applies to" column to read "numeric, array" if that matches the table format.
+            Choose whichever approach keeps the table readable.
+
+            Also add a section under ## Numeric describing that min/max apply to arrays:
+
+            Under the existing `### Numeric` section, add a note:
+            ```
+            **Array applicability:** `min:N` and `max:N` also apply to array/slice fields,
+            constraining the minimum and maximum number of items.
+            ```
+
+            ### 2. Fallback Tags section
+            The parser supports fallback tags (FallbackTags: []string{"validate"} in
+            internal/parser/parser.go:33). When a field has no `gt:` tag, the parser
+            checks configured fallback tags. This behavior is completely undocumented
+            in TAG_SPEC.md.
+
+            Add a new section at the end of TAG_SPEC.md (before ## Examples or after
+            ## Unknown Token Policy):
+
+            ```markdown
+            ## Fallback Tags
+
+            When a struct field has no `gt:` tag, goldenthread checks fallback tag keys
+            in order. The default fallback is `validate:` (compatible with
+            [go-playground/validator](https://github.com/go-playground/validator)).
+
+            Fallback tag parsing uses the same grammar as `gt:` tags. This allows
+            gradual adoption: existing `validate:` annotations are recognized without
+            requiring migration.
+
+            **Default fallback tags:** `validate`
+
+            **Example:**
+            ```go
+            type User struct {
+                // No gt: tag — falls back to validate: tag
+                Username string `validate:"required,min=3,max=20"`
+            }
+            ```
+
+            > **Note:** Fallback tags are parsed using goldenthread's tag grammar, not
+            > go-playground/validator syntax. Token names must match gt: token names.
+            > `min=3` (validator style) is not the same as `min:3` (goldenthread style).
+            ```
+
+            ## Files to Touch
+            - docs/TAG_SPEC.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm "Fallback Tags" section
+            and array min/max rows appear in the updated TAG_SPEC.md.
+
+            ## Constraints
+            - Do not modify any .go files
+            - Do not alter the Unknown Token Policy or existing Parsing Table rows
+            - Match existing TAG_SPEC.md markdown style (tables use | alignment)
+          files:
+            - docs/TAG_SPEC.md
+        - id: E
+          task: |
+            ## What to Fix
+            Two issues in docs/FEATURES.md:
+
+            ### Issue 1: `unique` tag misrepresented (line 116)
+            The Validation Rules table has this row:
+            ```
+            | Unique items | `unique` | - | ⚠️ Parsed, not emitted |
+            ```
+            This is misleading: it implies `unique` is a valid `gt:` tag users can write,
+            but doesn't explain what happens when they do. The UniqueItems bool exists in
+            schema.go FieldRules and the tag IS parsed — but since it is never emitted,
+            writing `gt:"unique"` in production code has no effect on the generated schema.
+
+            Fix: Update the row to make the partial status actionable:
+            ```
+            | Unique items | `unique` | - | ⚠️ Parsed but not emitted — has no effect on generated Zod output in v0.1 |
+            ```
+            Also update the ## Partially Implemented section (lines 149-151) to match:
+            ```
+            - **Unique items**: `UniqueItems` bool is set by the parser when `gt:"unique"`
+              is used, but the Zod emitter does not emit a uniqueness constraint.
+              Using `gt:"unique"` in v0.1 is a no-op in generated output.
+            ```
+
+            ### Issue 2: OpenAPI/JSON Schema marked "Not Supported (Out of Scope)"
+            The ## Not Supported (Out of Scope) section (around line 153-168) lists
+            OpenAPI and JSON Schema generation as out-of-scope. But ROADMAP.md v0.3
+            explicitly plans both. They are not out of scope — they are planned for v0.3.
+
+            Fix: Move or relabel the OpenAPI/JSON Schema rows. Either:
+            - Remove them from the "Not Supported" table and add a "Planned (v0.3)"
+              subsection in ## Future Considerations, OR
+            - Change the table caption from "Not Supported (Out of Scope)" to
+              "Not Yet Supported" and add a "Planned" column with v0.3 noted.
+
+            Preferred approach: add a `### Planned Emitters (v0.3)` note before the
+            Not Supported table that reads:
+            ```
+            > **Planned for v0.3:** OpenAPI 3.1 and JSON Schema emitters are on the
+            > roadmap. See [ROADMAP.md](../ROADMAP.md) for details.
+            ```
+            Then remove the OpenAPI and JSON Schema rows from the Not Supported table,
+            since they are not "out of scope" — they are in scope for a future version.
+
+            ## Files to Touch
+            - docs/FEATURES.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm "out of scope" no longer
+            applies to OpenAPI/JSON Schema, and `unique` row has clarified no-op status.
+
+            ## Constraints
+            - Do not modify any .go files
+            - Do not remove the unique row entirely — it should remain as a documented
+              partial feature so users know the tag is accepted (not an error)
+            - Do not alter the ## Version History section
+          files:
+            - docs/FEATURES.md
+        - id: F
+          task: |
+            ## What to Fix
+            examples/basic/EXPECTED_OUTPUT.md has two errors:
+
+            ### Issue 1: Wrong filename suffix (line 5, 88)
+            The file shows `## Generated: user.schema.ts` and the import path uses
+            `'./gen/user.schema'`. The actual emitter (cmd/goldenthread/main.go:208)
+            writes files as `<kebab-case-name>.ts` — e.g., `user.ts`, not `user.schema.ts`.
+
+            Fix: Replace all occurrences of `user.schema.ts` with `user.ts` and
+            `product.schema.ts` with `product.ts` throughout the file. Also update
+            the import path in the Usage in TypeScript section from `'./gen/user.schema'`
+            to `'./gen/user'`.
+
+            ### Issue 2: Phantom second output file (lines 41-63)
+            The file shows a second generated file `## Generated: user.types.ts` with
+            a plain TypeScript interface. The emitter generates exactly ONE file per
+            schema (the Zod schema file). There is no TypeScript interface emitter
+            in the current codebase. This second file does not exist.
+
+            Fix: Remove the entire `## Generated: user.types.ts` section (the heading
+            and its fenced TypeScript code block). The file should only document the
+            single `.ts` file that is actually generated.
+
+            The Key Features Demonstrated section (lines 128-134) mentions "Type inference"
+            which is correctly shown in the Zod schema file via `export type User = z.infer<...>`.
+            That bullet can remain — it refers to the infer export in the .ts file, not a
+            separate types file.
+
+            ## Files to Touch
+            - examples/basic/EXPECTED_OUTPUT.md only
+
+            ## Verification Gate
+            ```bash
+            go build ./...
+            ```
+            No tests to run — documentation change only. Confirm `.schema.ts` suffix
+            no longer appears anywhere in the file, and there is no `user.types.ts`
+            section remaining.
+
+            ## Constraints
+            - Do not modify any .go source files or examples/basic/models.go
+            - Do not remove the product.ts section — only the user.types.ts section
+            - Preserve the Usage in TypeScript and Key Features sections
+          files:
+            - examples/basic/EXPECTED_OUTPUT.md
+      base_commit: 4b69934d94e961dc76ae15bad9f15f974021be99
+quality_gates:
+    level: standard
+    gates:
+        - type: build
+          command: go build ./...
+          required: true
+          description: Verify no source files were accidentally touched
+        - type: test
+          command: go test ./...
+          required: false
+          description: Smoke test — documentation changes should not affect tests
+completion_reports:
+    A:
+        status: complete
+        branch: wave1-agent-A
+        commit: 54c1693
+        files_changed:
+            - README.md
+        verification: 'PASS: go build ./... clean; placeholder and v0.2 appear near init in README'
+    B:
+        status: complete
+        branch: wave1-agent-B
+        commit: "9120868"
+        files_changed:
+            - ROADMAP.md
+        files_created:
+            - ROADMAP.md
+        verification: PASS
+    C:
+        status: complete
+        branch: wave1-agent-C
+        commit: d67cccf
+        files_changed:
+            - docs/DESIGN.md
+        verification: PASS
+    D:
+        status: complete
+        branch: wave1-agent-D
+        commit: 6cead0d
+        files_changed:
+            - docs/TAG_SPEC.md
+        verification: PASS
+    E:
+        status: complete
+        branch: wave1-agent-E
+        commit: dcba5bb
+        files_changed:
+            - docs/FEATURES.md
+        verification: 'PASS: go build ./... succeeded; documentation-only change'
+    F:
+        status: complete
+        branch: wave1-agent-F
+        commit: 852b8bc
+        files_changed:
+            - examples/basic/EXPECTED_OUTPUT.md
+        verification: PASS
+pre_mortem:
+    overall_risk: low
+    rows:
+        - scenario: Agent D adds fallback tag note with incorrect go-playground/validator syntax example
+          likelihood: low
+          impact: low
+          mitigation: |
+            The fallback tag note should clarify that goldenthread's colon-separated syntax
+            (min:3) differs from validator's equals-separated syntax (min=3). The task prompt
+            includes this warning. Reviewer should check the example in the added section.
+        - scenario: Agent E removes unique row entirely instead of clarifying its no-op status
+          likelihood: low
+          impact: low
+          mitigation: |
+            The task prompt explicitly says not to remove the row. If removed, the fix is
+            to restore it with the clarified description from the task spec.
+        - scenario: Agent F removes the type inference export line when cleaning up user.types.ts section
+          likelihood: low
+          impact: low
+          mitigation: |
+            The task prompt distinguishes between the phantom user.types.ts section (remove it)
+            and the z.infer export in the Zod schema (keep it). Reviewer should confirm
+            export type User = z.infer<typeof UserSchema> still appears in the user.ts block.
+known_issues:
+    - title: Array min/max emitter gap (source code, not documentation)
+      description: |
+        The parser stores min/max for arrays in Rules.Min/Rules.Max (float64), but the
+        emitter reads MinItems/MaxItems (int ptr). There is no conversion between them.
+        This means `gt:"min:1"` on a []string field may not produce .min(1) in generated
+        output. This is a source code bug outside the scope of this documentation-only task.
+        TAG_SPEC.md should document what the parser accepts (which is min:N/max:N), and
+        the emitter gap should be filed as a separate source code issue.
+      status: Pre-existing source bug, out of scope for this task
+      workaround: Document the tag syntax as accepted by the parser; note emitter behavior may differ
+state: SCOUT_PENDING
