@@ -663,26 +663,46 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 				Message: "min rule only applies to numeric or array types",
 			}
 		}
-		f := parseFloat(value)
-		if f == nil {
-			return &schema.ValidationError{
-				Message: "invalid min value: " + value,
+		if isArray {
+			i := parseInt(value)
+			if i == nil {
+				return &schema.ValidationError{
+					Message: "invalid min value: " + value,
+				}
 			}
+			rules.MinItems = i
+		} else {
+			f := parseFloat(value)
+			if f == nil {
+				return &schema.ValidationError{
+					Message: "invalid min value: " + value,
+				}
+			}
+			rules.Min = f
 		}
-		rules.Min = f
 	case "max":
 		if !isNumeric && !isArray {
 			return &schema.ValidationError{
 				Message: "max rule only applies to numeric or array types",
 			}
 		}
-		f := parseFloat(value)
-		if f == nil {
-			return &schema.ValidationError{
-				Message: "invalid max value: " + value,
+		if isArray {
+			i := parseInt(value)
+			if i == nil {
+				return &schema.ValidationError{
+					Message: "invalid max value: " + value,
+				}
 			}
+			rules.MaxItems = i
+		} else {
+			f := parseFloat(value)
+			if f == nil {
+				return &schema.ValidationError{
+					Message: "invalid max value: " + value,
+				}
+			}
+			rules.Max = f
 		}
-		rules.Max = f
 	case "len":
 		if !isString {
 			return &schema.ValidationError{

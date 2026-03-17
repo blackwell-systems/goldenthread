@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Array `min`/`max` constraints now correctly emitted** — `gt:"min:N"` and `gt:"max:N"`
+  on array/slice fields were silently ignored in generated Zod output. The parser was
+  storing array item constraints in the numeric IR fields (`Rules.Min`/`Rules.Max`)
+  instead of the array-specific fields (`Rules.MinItems`/`Rules.MaxItems`). The Zod
+  emitter reads `MinItems`/`MaxItems` for arrays, so the constraints were never reached.
+  Fixed by routing array `min`/`max` to the correct IR fields in the parser.
+
 ## [0.1.2] - 2026-01-25
 
 ### Added
