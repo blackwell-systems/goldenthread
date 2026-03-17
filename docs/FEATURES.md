@@ -113,7 +113,7 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | **Array** | | | |
 | Min items | `min:1` | `.min(1)` | Complete |
 | Max items | `max:10` | `.max(10)` | Complete |
-| Unique items | `unique` | - | ⚠️ Parsed, not emitted |
+| Unique items | `unique` | - | ⚠️ Parsed but not emitted — has no effect on generated Zod output in v0.1 |
 | **Enum** | | | |
 | Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | Complete | Values with underscores supported |
 | **Custom** | | | |
@@ -147,8 +147,15 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 
 ### ⚠️ Partially Implemented
 
-- **Unique items**: Tag parsed (`UniqueItems` bool) but requires custom Zod refinement
+- **Unique items**: `UniqueItems` bool is set by the parser when `gt:"unique"`
+  is used, but the Zod emitter does not emit a uniqueness constraint.
+  Using `gt:"unique"` in v0.1 is a no-op in generated output.
 - **Custom validators**: Tag parsed (`CustomValidators []string`) but needs function registry
+
+### Planned Emitters (v0.3)
+
+> **Planned for v0.3:** OpenAPI 3.1 and JSON Schema emitters are on the
+> roadmap. See [ROADMAP.md](../ROADMAP.md) for details.
 
 ## Not Supported (Out of Scope)
 
