@@ -398,6 +398,14 @@ Exit codes:
 - `0` - Schemas in sync
 - `1` - Schemas out of sync or error
 
+### `init` _(planned for v0.2)_
+
+Initialize goldenthread configuration for a project.
+
+> **Note:** This command is not yet implemented. `goldenthread init --wails`
+> (Wails project auto-setup) is planned for v0.2. Running `goldenthread init`
+> currently prints a placeholder message.
+
 ## Current Limitations
 
 <details>
