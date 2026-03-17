@@ -43,6 +43,9 @@ Struct tag key: `gt:"..."`
 
 - `min > max` → **error**
 
+**Array applicability:** `min:N` and `max:N` also apply to array/slice fields,
+constraining the minimum and maximum number of items.
+
 ### String Length
 
 - `len:M..N` - length range where M and N are non-negative integers, M ≤ N
@@ -126,8 +129,8 @@ Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for s
 |-----------------|-----------|------------|--------------------------------------|---------------------------|
 | `required`      | flag      | any        | affects `Field.Optional`             | conflicts with `optional` |
 | `optional`      | flag      | any        | affects `Field.Optional`             | conflicts with `required` |
-| `min:N`         | kv        | numeric    | `Rules.Min`                          | error if non-numeric type |
-| `max:N`         | kv        | numeric    | `Rules.Max`                          | error if non-numeric type |
+| `min:N`         | kv        | numeric, array | `Rules.Min`                      | error if non-array/non-numeric type |
+| `max:N`         | kv        | numeric, array | `Rules.Max`                      | error if non-array/non-numeric type |
 | `len:M..N`      | kv        | string     | `Rules.MinLength`, `Rules.MaxLength` | parse `..` range          |
 | `pattern:REGEX` | kv        | string     | `Rules.Pattern`                      | store raw                 |
 | `enum:a,b,c`    | kv        | string     | `Rules.Enum`                         | comma-separated values    |
@@ -144,6 +147,31 @@ Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for s
 **v0.1 behavior: Unknown token → error**
 
 This prevents silent drift and makes goldenthread feel "compiler-like". Unknown tokens and unknown keys in `key:value` pairs will fail generation with a clear error message.
+
+## Fallback Tags
+
+When a struct field has no `gt:` tag, goldenthread checks fallback tag keys
+in order. The default fallback is `validate:` (compatible with
+[go-playground/validator](https://github.com/go-playground/validator)).
+
+Fallback tag parsing uses the same grammar as `gt:` tags. This allows
+gradual adoption: existing `validate:` annotations are recognized without
+requiring migration.
+
+**Default fallback tags:** `validate`
+
+**Example:**
+
+```go
+type User struct {
+    // No gt: tag — falls back to validate: tag
+    Username string `validate:"required,min=3,max=20"`
+}
+```
+
+> **Note:** Fallback tags are parsed using goldenthread's tag grammar, not
+> go-playground/validator syntax. Token names must match gt: token names.
+> `min=3` (validator style) is not the same as `min:3` (goldenthread style).
 
 ## Examples
 
