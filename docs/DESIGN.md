@@ -145,9 +145,8 @@ gt:"rule1,rule2:value,rule3:value"
 #### Array Rules
 
 ```go
-`gt:"minitems:1"`        // Minimum array length
-`gt:"maxitems:10"`       // Maximum array length
-`gt:"unique"`            // All items must be unique
+`gt:"min:1"`             // Minimum array length
+`gt:"max:10"`            // Maximum array length
 ```
 
 ### Tag Parsing Algorithm
