@@ -68,6 +68,7 @@ func (p *Parser) ParsePackages(pkgs []*load.Package) ([]*schema.Schema, error) {
 // extractSchemasInternal walks the AST and extracts schema definitions.
 func (p *Parser) extractSchemasInternal(fset *token.FileSet, file *ast.File, path string, pkgPath string) ([]*schema.Schema, error) {
 	var schemas []*schema.Schema
+	var extractErr error
 
 	ast.Inspect(file, func(n ast.Node) bool {
 		// Look for type declarations
@@ -96,7 +97,11 @@ func (p *Parser) extractSchemasInternal(fset *token.FileSet, file *ast.File, pat
 		}
 
 		// Extract schema
-		s := p.extractSchema(fset, typeSpec, structType, pkgPath, path)
+		s, err := p.extractSchema(fset, typeSpec, structType, pkgPath, path)
+		if err != nil {
+			extractErr = err
+			return false
+		}
 		if s != nil {
 			schemas = append(schemas, s)
 		}
@@ -104,11 +109,16 @@ func (p *Parser) extractSchemasInternal(fset *token.FileSet, file *ast.File, pat
 		return true
 	})
 
+	if extractErr != nil {
+		return nil, extractErr
+	}
+
 	return schemas, nil
 }
 
 // extractSchema converts an AST struct type to a Schema.
-func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType, pkg, path string) *schema.Schema {
+// Returns (nil, error) if a field or the discriminated-union shape is invalid.
+func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, structType *ast.StructType, pkg, path string) (*schema.Schema, error) {
 	s := &schema.Schema{
 		Name:        typeSpec.Name.Name,
 		PackageName: pkg,
@@ -131,7 +141,7 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 			// Embedded field
 			f, err := p.extractEmbeddedField(fset, field, path)
 			if err != nil {
-				return nil
+				return nil, err
 			}
 			if f != nil {
 				s.Fields = append(s.Fields, *f)
@@ -141,7 +151,7 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 			for _, name := range field.Names {
 				f, err := p.extractField(fset, field, name.Name, path)
 				if err != nil {
-					return nil
+					return nil, err
 				}
 				if f != nil {
 					s.Fields = append(s.Fields, *f)
@@ -150,7 +160,103 @@ func (p *Parser) extractSchema(fset *token.FileSet, typeSpec *ast.TypeSpec, stru
 		}
 	}
 
-	return s
+	// Assemble discriminated-union metadata from discriminator/variant fields.
+	if err := p.buildDiscriminatedUnion(s); err != nil {
+		return nil, err
+	}
+
+	return s, nil
+}
+
+// buildDiscriminatedUnion inspects a schema's fields for discriminator and
+// variant markers and, when present, populates s.Discriminator. It enforces
+// the shape: exactly one gt:"discriminator" field, one or more gt:"variant:<name>"
+// fields, and unique variant names.
+func (p *Parser) buildDiscriminatedUnion(s *schema.Schema) error {
+	var discriminator *schema.Field
+	var discriminatorIdx int
+	var variants []schema.Field
+
+	for i := range s.Fields {
+		f := &s.Fields[i]
+		if f.Rules.IsDiscriminator {
+			if discriminator != nil {
+				return &schema.ValidationError{
+					Field:   f.GoName,
+					Message: "multiple discriminator fields (previously defined at " + discriminator.Pos.String() + ")",
+					Pos:     f.Pos,
+				}
+			}
+			discriminator = f
+			discriminatorIdx = i
+		}
+		if f.Rules.Variant != "" {
+			variants = append(variants, *f)
+		}
+	}
+
+	// No discriminated-union markers: plain struct.
+	if discriminator == nil && len(variants) == 0 {
+		return nil
+	}
+
+	if discriminator == nil {
+		return &schema.ValidationError{
+			Field:   s.Name,
+			Message: "variant fields present but no discriminator field (add a gt:\"discriminator\" field)",
+			Pos:     s.Pos,
+		}
+	}
+
+	if len(variants) == 0 {
+		return &schema.ValidationError{
+			Field:   discriminator.GoName,
+			Message: "discriminator field present but no variant fields (add gt:\"variant:<name>\" fields)",
+			Pos:     discriminator.Pos,
+		}
+	}
+
+	discName := s.Fields[discriminatorIdx].JSONName
+	if discName == "" {
+		discName = camelCaseForJSON(discriminator.GoName)
+	}
+
+	du := &schema.DiscriminatedUnion{
+		DiscriminatorName: discName,
+	}
+
+	seen := make(map[string]schema.SourcePos)
+	for i := range variants {
+		v := variants[i]
+		if prevPos, exists := seen[v.Rules.Variant]; exists {
+			return &schema.ValidationError{
+				Field:   v.GoName,
+				Message: "duplicate variant value " + v.Rules.Variant + " (previously defined at " + prevPos.String() + ")",
+				Pos:     v.Pos,
+			}
+		}
+		seen[v.Rules.Variant] = v.Pos
+
+		payload := v
+		du.Variants = append(du.Variants, schema.Variant{
+			Value:        v.Rules.Variant,
+			PayloadField: &payload,
+		})
+	}
+
+	s.Discriminator = du
+	return nil
+}
+
+// camelCaseForJSON derives a default JSON name from a Go field name when no
+// json tag is present, matching the emitter's fallback behavior.
+func camelCaseForJSON(goName string) string {
+	if goName == "" {
+		return ""
+	}
+	runes := []rune(goName)
+	runes[0] = []rune(strings.ToLower(string(runes[0])))[0]
+	return string(runes)
 }
 
 // extractField converts an AST field to a schema Field.
@@ -599,6 +705,8 @@ func (p *Parser) parseRulesWithValidation(tagValue string, fieldType ast.Expr) (
 		"email": true, "uuid": true, "url": true,
 		"date": true, "datetime": true, "ipv4": true, "ipv6": true,
 		"enum": true,
+		// Discriminated union markers
+		"discriminator": true, "variant": true,
 	}
 
 	// Parse tokens - need to handle key:value where value contains commas
@@ -773,12 +881,32 @@ func (p *Parser) applyRuleWithValidation(rules *schema.FieldRules, key, value st
 			}
 		}
 		rules.Enum = filtered
+	case "variant":
+		name := strings.TrimSpace(value)
+		if name == "" {
+			return &schema.ValidationError{
+				Message: "variant must name a discriminator value",
+			}
+		}
+		rules.Variant = name
 	}
 	return nil
 }
 
 // applyFlagWithValidation applies a boolean flag with conflict checking.
 func (p *Parser) applyFlagWithValidation(rules *schema.FieldRules, flag string, isString bool, formatCount *int) error {
+	// Discriminator marker (string-only): identifies the tag field of a
+	// discriminated union.
+	if flag == "discriminator" {
+		if !isString {
+			return &schema.ValidationError{
+				Message: "discriminator only applies to string types",
+			}
+		}
+		rules.IsDiscriminator = true
+		return nil
+	}
+
 	format := schema.Format(flag)
 
 	// Check if it's a format flag

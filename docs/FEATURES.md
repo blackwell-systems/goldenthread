@@ -116,6 +116,10 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 | Unique items | `unique` | - | ⚠️ Parsed but not emitted — has no effect on generated Zod output in v0.1 |
 | **Enum** | | | |
 | Enum values | `enum:foo,bar,baz` | `z.enum(['foo', 'bar', 'baz'])` | Complete | Values with underscores supported |
+| **Discriminated Union** | | | |
+| Discriminator | `discriminator` | (union tag field) | Complete | String field selecting the variant |
+| Variant payload | `variant:name` | `z.object({ kind: z.literal('name'), ... })` | Complete | Optional payload field per variant |
+| Union | (struct with above) | `z.discriminatedUnion('kind', [...])` | Complete | Payloads emitted required within variant |
 | **Custom** | | | |
 | Custom validators | `validator:funcName` | - | ⚠️ Parsed, not emitted |
 
@@ -144,6 +148,10 @@ goldenthread generates TypeScript/Zod validation schemas from Go structs with va
 - **5-level optional precedence**: `required` → `optional` → pointer → `omitempty` → default
 - **Position tracking**: Every schema/field tracks source file and line number
 - **Documentation preservation**: Go comments become JSDoc in generated TypeScript
+- **Discriminated unions**: A Go struct with a `gt:"discriminator"` field and
+  one `gt:"variant:<name>"` payload field per variant compiles to a Zod
+  `z.discriminatedUnion`. Payloads are emitted required within their variant so
+  the union stays narrow. See [examples/wiring](../examples/wiring/).
 
 ### ⚠️ Partially Implemented
 
@@ -163,10 +171,9 @@ These Zod features don't have clean Go struct equivalents:
 
 | Feature | Reason |
 |---------|--------|
-| `z.union()` | Go doesn't have sum types (would need interface analysis) |
+| `z.union()` | Untagged unions have no clean Go equivalent; use a discriminated union instead |
 | `z.intersection()` | Could add via multiple embeds, but complex |
-| `z.discriminatedUnion()` | Requires tagged unions (interface with type field) |
-| `z.literal()` | Needs const value analysis |
+| `z.literal()` (standalone) | Needs const value analysis; literals are emitted today only as discriminator tags inside a discriminated union |
 | `z.tuple()` | Needs Go array type `[3]int` (not slices) |
 | `z.transform()` | Runtime transforms are out of scope |
 | `z.refine()` | Custom validation requires runtime code |
@@ -196,10 +203,12 @@ These Zod features don't have clean Go struct equivalents:
 - Custom validator registry: Function name → actual validation code
 
 ### High Complexity
-- Union types: Interface analysis for sum types
-- Discriminated unions: Type field detection
+- Untagged union types: Interface analysis for sum types
 - Lazy/recursive: Self-referential type handling
 - Transform/refine: Custom validation logic
+
+> **Shipped:** Discriminated unions (tagged one-of via `discriminator` /
+> `variant:<name>`) are implemented. See the Advanced Features section.
 
 ## Version History
 

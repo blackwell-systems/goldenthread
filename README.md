@@ -57,6 +57,7 @@ Changes to Go structs regenerate TypeScript schemas automatically. The compiler 
 - **Full Go type support**: Primitives, arrays, maps, enums, nested objects, pointers
 - **Comprehensive validation**: Length bounds, numeric ranges, regex patterns, format validators (email, UUID, URL, IPv4/IPv6, datetime)
 - **Enum generation**: `z.enum(['pending', 'completed'])` from Go string fields
+- **Discriminated unions**: `z.discriminatedUnion('kind', [...])` from a Go one-of struct
 - **Map support**: `z.record(z.string(), T)` for Go maps
 - **Array validation**: Min/max length constraints
 - **Nested objects**: Type-safe references to other schemas
@@ -348,6 +349,34 @@ const TaskSchema = z.object({
 })
 ```
 
+### Discriminated Unions
+
+A Go struct with a `discriminator` field and one `variant:<name>` payload field
+per variant compiles to a Zod discriminated union:
+
+```go
+// WiringElement is exactly one of edge, switch, or join.
+type WiringElement struct {
+  Kind   string      `json:"kind" gt:"discriminator"`
+  Edge   *EdgeSpec   `json:"edge,omitempty"   gt:"variant:edge"`
+  Switch *SwitchSpec `json:"switch,omitempty" gt:"variant:switch"`
+  Join   *JoinSpec   `json:"join,omitempty"   gt:"variant:join"`
+}
+```
+
+Generates a discriminated union that TypeScript narrows on `kind`:
+
+```typescript
+const WiringElementSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('edge'),   edge: EdgeSpecSchema }),
+  z.object({ kind: z.literal('switch'), switch: SwitchSpecSchema }),
+  z.object({ kind: z.literal('join'),   join: JoinSpecSchema })
+])
+```
+
+The payload is emitted required within its variant: an element tagged `edge`
+with no `edge` payload fails validation. See [examples/wiring](examples/wiring/).
+
 ### Maps
 
 ```go
@@ -413,8 +442,7 @@ Initialize goldenthread configuration for a project.
 
 ### Type System
 
-- Go union types (interfaces with type assertions)
-- Discriminated unions
+- Go union types (untagged interfaces with type assertions), use a discriminated union instead
 - Fixed-length arrays (`[3]int`)
 - Literal constant values
 - Recursive/self-referential types

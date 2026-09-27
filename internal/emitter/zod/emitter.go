@@ -42,7 +42,23 @@ func (e *Emitter) Emit(s *schema.Schema) (string, error) {
 	// Schema documentation
 	writeJSDoc(&b, "", s.Documentation)
 
-	// Schema constant
+	// Discriminated unions emit a z.discriminatedUnion rather than a z.object.
+	if s.Discriminator != nil {
+		e.emitDiscriminatedUnion(&b, s)
+	} else {
+		e.emitObjectSchema(&b, s)
+	}
+
+	// Inferred type
+	if e.ExportTypes {
+		b.WriteString(fmt.Sprintf("export type %s = z.infer<typeof %sSchema>\n", s.Name, s.Name))
+	}
+
+	return b.String(), nil
+}
+
+// emitObjectSchema emits a plain z.object schema constant.
+func (e *Emitter) emitObjectSchema(b *strings.Builder, s *schema.Schema) {
 	b.WriteString(fmt.Sprintf("export const %sSchema = z.object({\n", s.Name))
 
 	// Filter out embedded fields (they've been flattened)
@@ -54,17 +70,63 @@ func (e *Emitter) Emit(s *schema.Schema) (string, error) {
 	}
 
 	for i, field := range regularFields {
-		e.emitField(&b, field, i == len(regularFields)-1)
+		e.emitField(b, field, i == len(regularFields)-1)
 	}
 
 	b.WriteString("})\n\n")
+}
 
-	// Inferred type
-	if e.ExportTypes {
-		b.WriteString(fmt.Sprintf("export type %s = z.infer<typeof %sSchema>\n", s.Name, s.Name))
+// emitDiscriminatedUnion emits a z.discriminatedUnion schema constant.
+// Each variant is an object of the discriminator literal plus its payload,
+// so the generated schema is a real tagged one-of that Zod can narrow on.
+func (e *Emitter) emitDiscriminatedUnion(b *strings.Builder, s *schema.Schema) {
+	du := s.Discriminator
+
+	b.WriteString(fmt.Sprintf("export const %sSchema = z.discriminatedUnion('%s', [\n", s.Name, du.DiscriminatorName))
+
+	for i, variant := range du.Variants {
+		b.WriteString("  z.object({\n")
+
+		// Discriminator literal. Trailing comma only when a payload follows.
+		if variant.PayloadField != nil {
+			b.WriteString(fmt.Sprintf("    %s: z.literal('%s'),\n", du.DiscriminatorName, variant.Value))
+		} else {
+			b.WriteString(fmt.Sprintf("    %s: z.literal('%s')\n", du.DiscriminatorName, variant.Value))
+		}
+
+		// Payload field (optional variants carry only the discriminator literal)
+		if variant.PayloadField != nil {
+			e.emitVariantPayload(b, *variant.PayloadField)
+		}
+
+		b.WriteString("  })")
+		if i != len(du.Variants)-1 {
+			b.WriteString(",")
+		}
+		b.WriteString("\n")
 	}
 
-	return b.String(), nil
+	b.WriteString("])\n\n")
+}
+
+// emitVariantPayload emits a single payload field inside a variant object,
+// indented to match the surrounding z.object. It reuses the shared type
+// emission so nested objects, slices, and named references behave identically
+// to plain-object fields.
+//
+// The payload is always emitted as required: a *EdgeSpec with omitempty is how
+// a Go struct expresses "present only for the edge variant", not a genuinely
+// optional field. Within its variant, the payload is present by definition, so
+// forcing required keeps the union narrow (an edge with no edge payload fails).
+func (e *Emitter) emitVariantPayload(b *strings.Builder, field schema.Field) {
+	fieldName := field.JSONName
+	if fieldName == "" {
+		fieldName = camelCase(field.GoName)
+	}
+
+	b.WriteString(fmt.Sprintf("    %s: ", fieldName))
+	e.emitType(b, field.Type, field.Rules, true)
+	b.WriteString("\n")
 }
 
 // emitField generates a Zod field definition.

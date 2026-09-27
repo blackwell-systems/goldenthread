@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Discriminated union types** (roadmap v0.4, pulled forward): a Go struct
+  with a `gt:"discriminator"` string field and one `gt:"variant:<name>"` payload
+  field per variant now compiles to a Zod `z.discriminatedUnion`. Each variant
+  emits an object of the discriminator literal plus its payload
+  (`z.object({ kind: z.literal('edge'), edge: EdgeSpecSchema })`), and the
+  inferred `z.infer` type is the corresponding TypeScript union. Payloads are
+  emitted required within their variant object even when the Go field is a
+  pointer with `omitempty`, keeping the union narrow. New tags: `discriminator`
+  (string-only, one per struct) and `variant:<name>`. Documented in
+  docs/TAG_SPEC.md and docs/FEATURES.md, with a runnable fixture in
+  examples/wiring/. This makes goldenthread ready to serve a visual flow-builder
+  that consumes a Go wiring config.
+
 ### Documentation
 
 - **TAG_SPEC.md** — added array `min`/`max` rows to parsing table; added Fallback Tags section

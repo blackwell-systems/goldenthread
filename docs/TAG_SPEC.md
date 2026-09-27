@@ -95,6 +95,119 @@ Role   string `gt:"enum:admin,user"`              // ✓ Valid
 Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for strings
 ```
 
+### Discriminated Unions
+
+Two tags describe a tagged one-of on a Go struct. The struct becomes a Zod
+`z.discriminatedUnion` instead of a `z.object`.
+
+- `discriminator` (string-only) - marks the field whose literal value selects
+  the active variant (e.g., the `kind` field). Exactly one per struct.
+- `variant:NAME` - marks an optional payload field as the payload for the
+  variant selected when the discriminator equals `NAME`.
+
+**Shape:**
+
+A discriminated-union struct has one `discriminator` field plus one or more
+`variant:NAME` payload fields. Payload fields are typically pointers with
+`omitempty`, since a Go struct expresses "present only for this variant" as an
+optional field.
+
+**Validation:**
+
+- `discriminator` on a non-string field → **error**
+- `variant:` with an empty name → **error**
+- More than one `discriminator` field in a struct → **error**
+- `variant` fields present but no `discriminator` field → **error**
+- A `discriminator` field but no `variant` fields → **error**
+- Duplicate variant values → **error**
+
+**Emission:**
+
+Each variant emits an object of the discriminator literal plus its payload:
+
+```
+z.object({ kind: z.literal('edge'), edge: EdgeSpecSchema })
+```
+
+The payload is emitted as **required** inside its variant object even when the
+Go field is a pointer with `omitempty`: within the `edge` variant the payload is
+present by definition, so forcing required keeps the union narrow.
+
+**Example:**
+
+```go
+// WiringElement is exactly one of edge, switch, or join.
+type WiringElement struct {
+    Kind   string      `json:"kind" gt:"discriminator"`
+    Edge   *EdgeSpec   `json:"edge,omitempty"   gt:"variant:edge"`
+    Switch *SwitchSpec `json:"switch,omitempty" gt:"variant:switch"`
+    Join   *JoinSpec   `json:"join,omitempty"   gt:"variant:join"`
+}
+```
+
+Emits:
+
+```typescript
+export const WiringElementSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('edge'),   edge: EdgeSpecSchema }),
+  z.object({ kind: z.literal('switch'), switch: SwitchSpecSchema }),
+  z.object({ kind: z.literal('join'),   join: JoinSpecSchema })
+])
+```
+
+### Discriminated Unions
+
+A discriminated union (tagged one-of) is expressed as a Go struct with a
+discriminator field plus one optional payload field per variant.
+
+- `discriminator` (string-only) - marks the field whose literal value selects
+  the active variant. Its JSON name becomes the discriminator key.
+- `variant:<name>` - marks a payload field belonging to the variant selected
+  when the discriminator equals `<name>`.
+
+A struct is treated as a discriminated union when it has a `discriminator`
+field. Each variant object is emitted as the discriminator literal plus its
+payload, wrapped in `z.discriminatedUnion`.
+
+The payload is emitted as **required** inside its variant, even when the Go
+field is a pointer or has `omitempty`: a `*EdgeSpec` with `omitempty` is how a
+Go struct expresses "present only for the edge variant", not a genuinely
+optional field.
+
+**Validation:**
+
+- `discriminator` applies only to string fields → **error** otherwise
+- `variant:<name>` must name a non-empty value
+- Exactly one `discriminator` field per struct → **error** on more than one
+- At least one `variant` field is required when a `discriminator` is present,
+  and a `discriminator` is required when any `variant` field is present
+- Variant values must be unique within a struct → **error** on duplicates
+
+**Example:**
+
+```go
+// WiringElement is exactly one of edge, switch, or join.
+type WiringElement struct {
+    Kind   string      `json:"kind" gt:"discriminator"`
+    Edge   *EdgeSpec   `json:"edge,omitempty" gt:"variant:edge"`
+    Switch *SwitchSpec `json:"switch,omitempty" gt:"variant:switch"`
+    Join   *JoinSpec   `json:"join,omitempty" gt:"variant:join"`
+}
+```
+
+Emits:
+
+```typescript
+export const WiringElementSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('edge'), edge: EdgeSpecSchema }),
+  z.object({ kind: z.literal('switch'), switch: SwitchSpecSchema }),
+  z.object({ kind: z.literal('join'), join: JoinSpecSchema })
+])
+```
+
+A variant may carry no payload (discriminator literal only); omit the
+`variant` payload field and use a two- or more-variant union.
+
 ### Formats (string-only)
 
 - `email` - email address
@@ -122,6 +235,7 @@ Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for s
 | `ipv4`     | `z.string().ip({ version: 'v4' })`       |
 | `ipv6`     | `z.string().ip({ version: 'v6' })`       |
 | `enum:a,b` | `z.enum(['a', 'b'])`                     |
+| `discriminator` + `variant:x` | `z.discriminatedUnion('kind', [ z.object({ kind: z.literal('x'), ... }) ])` |
 
 ## Parsing Table
 
@@ -134,6 +248,8 @@ Count  int    `gt:"enum:1,2,3"`                    // ✗ Error: enum only for s
 | `len:M..N`      | kv        | string     | `Rules.MinLength`, `Rules.MaxLength` | parse `..` range          |
 | `pattern:REGEX` | kv        | string     | `Rules.Pattern`                      | store raw                 |
 | `enum:a,b,c`    | kv        | string     | `Rules.Enum`                         | comma-separated values    |
+| `discriminator` | flag      | string     | `Rules.IsDiscriminator`, `Schema.Discriminator` | one per struct |
+| `variant:NAME`  | kv        | any        | `Rules.Variant`, `Schema.Discriminator` | payload for variant NAME  |
 | `email`         | flag      | string     | `Rules.Format=FormatEmail`           | only one format           |
 | `uuid`          | flag      | string     | `Rules.Format=FormatUUID`            | only one format           |
 | `url`           | flag      | string     | `Rules.Format=FormatURL`             | only one format           |

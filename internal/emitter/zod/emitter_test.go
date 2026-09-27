@@ -536,6 +536,111 @@ func TestEmit_MultipleFields(t *testing.T) {
 	}
 }
 
+func TestEmit_DiscriminatedUnion(t *testing.T) {
+	edgePayload := schema.Field{
+		GoName:   "Edge",
+		JSONName: "edge",
+		Type: schema.Type{
+			Kind: schema.TypeNamed,
+			Ref:  &schema.TypeRef{Name: "EdgeSpec"},
+		},
+	}
+	switchPayload := schema.Field{
+		GoName:   "Switch",
+		JSONName: "switch",
+		Type: schema.Type{
+			Kind: schema.TypeNamed,
+			Ref:  &schema.TypeRef{Name: "SwitchSpec"},
+		},
+	}
+	joinPayload := schema.Field{
+		GoName:   "Join",
+		JSONName: "join",
+		Type: schema.Type{
+			Kind: schema.TypeNamed,
+			Ref:  &schema.TypeRef{Name: "JoinSpec"},
+		},
+	}
+
+	s := &schema.Schema{
+		Name:        "WiringElement",
+		PackageName: "test",
+		Discriminator: &schema.DiscriminatedUnion{
+			DiscriminatorName: "kind",
+			Variants: []schema.Variant{
+				{Value: "edge", PayloadField: &edgePayload},
+				{Value: "switch", PayloadField: &switchPayload},
+				{Value: "join", PayloadField: &joinPayload},
+			},
+		},
+	}
+
+	emitter := zod.NewEmitter()
+	output, err := emitter.Emit(s)
+	if err != nil {
+		t.Fatalf("Emit() error = %v", err)
+	}
+
+	expected := []string{
+		"export const WiringElementSchema = z.discriminatedUnion('kind', [",
+		"kind: z.literal('edge'),",
+		"edge: EdgeSpecSchema",
+		"kind: z.literal('switch'),",
+		"switch: SwitchSpecSchema",
+		"kind: z.literal('join'),",
+		"join: JoinSpecSchema",
+		"export type WiringElement = z.infer<typeof WiringElementSchema>",
+	}
+	for _, exp := range expected {
+		if !strings.Contains(output, exp) {
+			t.Errorf("Output missing expected string: %q\nGot:\n%s", exp, output)
+		}
+	}
+
+	// Must not fall back to a plain z.object schema constant.
+	if strings.Contains(output, "z.object({\n  kind:") {
+		t.Errorf("Discriminated union should not emit a top-level z.object\nGot:\n%s", output)
+	}
+}
+
+func TestEmit_DiscriminatedUnion_VariantWithoutPayload(t *testing.T) {
+	activePayload := schema.Field{
+		GoName:   "Active",
+		JSONName: "active",
+		Type: schema.Type{
+			Kind: schema.TypeNamed,
+			Ref:  &schema.TypeRef{Name: "ActiveState"},
+		},
+	}
+
+	s := &schema.Schema{
+		Name:        "State",
+		PackageName: "test",
+		Discriminator: &schema.DiscriminatedUnion{
+			DiscriminatorName: "kind",
+			Variants: []schema.Variant{
+				{Value: "active", PayloadField: &activePayload},
+				// idle variant carries only the discriminator literal.
+				{Value: "idle", PayloadField: nil},
+			},
+		},
+	}
+
+	emitter := zod.NewEmitter()
+	output, err := emitter.Emit(s)
+	if err != nil {
+		t.Fatalf("Emit() error = %v", err)
+	}
+
+	if !strings.Contains(output, "kind: z.literal('idle')") {
+		t.Errorf("Output missing payload-free variant literal\nGot:\n%s", output)
+	}
+	// A payload-free variant object must close cleanly with no dangling field.
+	if !strings.Contains(output, "z.literal('idle')\n  })") {
+		t.Errorf("Payload-free variant object malformed\nGot:\n%s", output)
+	}
+}
+
 // Helper functions
 func intPtr(i int) *int {
 	return &i

@@ -23,8 +23,38 @@ type Schema struct {
 	// Documentation is the comment above the struct
 	Documentation string
 
+	// Discriminator, when non-nil, marks this schema as a discriminated union.
+	// The schema is then emitted as a Zod z.discriminatedUnion over its
+	// variants rather than a plain z.object. See DiscriminatedUnion.
+	Discriminator *DiscriminatedUnion
+
 	// Pos tracks where this schema was defined
 	Pos SourcePos
+}
+
+// DiscriminatedUnion describes a tagged one-of: a discriminator field whose
+// literal value selects exactly one payload field. It is derived from a Go
+// struct with a `gt:"discriminator"` field and one or more `gt:"variant:<name>"`
+// payload fields.
+type DiscriminatedUnion struct {
+	// DiscriminatorName is the JSON name of the discriminator field
+	// (e.g., "kind"). This becomes the first argument to z.discriminatedUnion.
+	DiscriminatorName string
+
+	// Variants are the union members in source order, each pairing a
+	// discriminator literal with its payload field.
+	Variants []Variant
+}
+
+// Variant is a single member of a discriminated union.
+type Variant struct {
+	// Value is the discriminator literal that selects this variant
+	// (e.g., "edge"). Emitted as z.literal('edge').
+	Value string
+
+	// PayloadField is the field carrying the variant's payload, or nil when
+	// the variant has no payload (discriminator literal only).
+	PayloadField *Field
 }
 
 // Field represents a single struct field with validation rules.
@@ -175,6 +205,14 @@ type FieldRules struct {
 
 	// Custom validators (function names)
 	CustomValidators []string
+
+	// IsDiscriminator marks this field as the discriminator of a
+	// discriminated union (tag: gt:"discriminator").
+	IsDiscriminator bool
+
+	// Variant, when non-empty, marks this field as the payload for a union
+	// variant selected by this discriminator literal (tag: gt:"variant:<name>").
+	Variant string
 }
 
 // Format represents standardized string formats.

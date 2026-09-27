@@ -6,6 +6,7 @@ package parser_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/blackwell-systems/goldenthread/internal/load"
@@ -364,6 +365,209 @@ type Config struct {
 	}
 	if settings.Type.Value == nil || settings.Type.Value.Kind != schema.TypeString {
 		t.Error("Expected map value type string")
+	}
+}
+
+func TestParsePackages_DiscriminatedUnion(t *testing.T) {
+	// WiringElement is a one-of over edge / switch / join. SwitchSpec exercises
+	// depth: it nests a sub-struct (SwitchCase) and a slice.
+	code := `package test
+
+type EdgeSpec struct {
+	From string ` + "`json:\"from\" gt:\"required\"`" + `
+	To   string ` + "`json:\"to\" gt:\"required\"`" + `
+}
+
+type SwitchCase struct {
+	Match string ` + "`json:\"match\" gt:\"required\"`" + `
+	Next  string ` + "`json:\"next\" gt:\"required\"`" + `
+}
+
+type SwitchSpec struct {
+	On    string       ` + "`json:\"on\" gt:\"required\"`" + `
+	Cases []SwitchCase ` + "`json:\"cases\" gt:\"required,min:1\"`" + `
+}
+
+type JoinSpec struct {
+	Inputs []string ` + "`json:\"inputs\" gt:\"required,min:2\"`" + `
+}
+
+// WiringElement is exactly one of edge, switch, or join.
+type WiringElement struct {
+	Kind   string      ` + "`json:\"kind\" gt:\"discriminator\"`" + `
+	Edge   *EdgeSpec   ` + "`json:\"edge,omitempty\" gt:\"variant:edge\"`" + `
+	Switch *SwitchSpec ` + "`json:\"switch,omitempty\" gt:\"variant:switch\"`" + `
+	Join   *JoinSpec   ` + "`json:\"join,omitempty\" gt:\"variant:join\"`" + `
+}
+`
+
+	tmpDir := setupTestModule(t, code)
+
+	pkgs, err := load.LoadPackagesWithDir(tmpDir, ".")
+	if err != nil {
+		t.Fatalf("LoadPackages() error = %v", err)
+	}
+
+	p := parser.NewParser()
+	schemas, err := p.ParsePackages(pkgs)
+	if err != nil {
+		t.Fatalf("ParsePackages() error = %v", err)
+	}
+
+	// Find the WiringElement schema.
+	var we *schema.Schema
+	for _, s := range schemas {
+		if s.Name == "WiringElement" {
+			we = s
+		}
+	}
+	if we == nil {
+		t.Fatalf("WiringElement schema not found (got %d schemas)", len(schemas))
+	}
+
+	if we.Discriminator == nil {
+		t.Fatal("Expected WiringElement to be a discriminated union")
+	}
+	if we.Discriminator.DiscriminatorName != "kind" {
+		t.Errorf("Expected discriminator name 'kind', got %q", we.Discriminator.DiscriminatorName)
+	}
+
+	if len(we.Discriminator.Variants) != 3 {
+		t.Fatalf("Expected 3 variants, got %d", len(we.Discriminator.Variants))
+	}
+
+	expectedVariants := []struct {
+		value    string
+		payload  string
+		jsonName string
+	}{
+		{"edge", "EdgeSpec", "edge"},
+		{"switch", "SwitchSpec", "switch"},
+		{"join", "JoinSpec", "join"},
+	}
+	for i, exp := range expectedVariants {
+		v := we.Discriminator.Variants[i]
+		if v.Value != exp.value {
+			t.Errorf("Variant[%d]: expected value %q, got %q", i, exp.value, v.Value)
+		}
+		if v.PayloadField == nil {
+			t.Fatalf("Variant[%d]: expected payload field", i)
+		}
+		if v.PayloadField.JSONName != exp.jsonName {
+			t.Errorf("Variant[%d]: expected payload JSON name %q, got %q", i, exp.jsonName, v.PayloadField.JSONName)
+		}
+		if v.PayloadField.Type.Kind != schema.TypeNamed || v.PayloadField.Type.Ref == nil {
+			t.Fatalf("Variant[%d]: expected named payload type", i)
+		}
+		if v.PayloadField.Type.Ref.Name != exp.payload {
+			t.Errorf("Variant[%d]: expected payload type %q, got %q", i, exp.payload, v.PayloadField.Type.Ref.Name)
+		}
+	}
+}
+
+func TestParsePackages_DiscriminatedUnion_TwoVariants(t *testing.T) {
+	// Edge case: a minimal two-variant union.
+	code := `package test
+
+type OnEvent struct {
+	Signal string ` + "`json:\"signal\" gt:\"required\"`" + `
+}
+
+type OffEvent struct {
+	Reason string ` + "`json:\"reason\" gt:\"required\"`" + `
+}
+
+type Toggle struct {
+	State string    ` + "`json:\"state\" gt:\"discriminator\"`" + `
+	On    *OnEvent  ` + "`json:\"on,omitempty\" gt:\"variant:on\"`" + `
+	Off   *OffEvent ` + "`json:\"off,omitempty\" gt:\"variant:off\"`" + `
+}
+`
+
+	tmpDir := setupTestModule(t, code)
+
+	pkgs, err := load.LoadPackagesWithDir(tmpDir, ".")
+	if err != nil {
+		t.Fatalf("LoadPackages() error = %v", err)
+	}
+
+	p := parser.NewParser()
+	schemas, err := p.ParsePackages(pkgs)
+	if err != nil {
+		t.Fatalf("ParsePackages() error = %v", err)
+	}
+
+	var toggle *schema.Schema
+	for _, s := range schemas {
+		if s.Name == "Toggle" {
+			toggle = s
+		}
+	}
+	if toggle == nil {
+		t.Fatal("Toggle schema not found")
+	}
+	if toggle.Discriminator == nil {
+		t.Fatal("Expected Toggle to be a discriminated union")
+	}
+	if toggle.Discriminator.DiscriminatorName != "state" {
+		t.Errorf("Expected discriminator name 'state', got %q", toggle.Discriminator.DiscriminatorName)
+	}
+	if len(toggle.Discriminator.Variants) != 2 {
+		t.Fatalf("Expected 2 variants, got %d", len(toggle.Discriminator.Variants))
+	}
+}
+
+func TestParsePackages_DiscriminatorNonString(t *testing.T) {
+	code := `package test
+
+type Bad struct {
+	Kind int ` + "`json:\"kind\" gt:\"discriminator\"`" + `
+}
+`
+
+	tmpDir := setupTestModule(t, code)
+
+	pkgs, err := load.LoadPackagesWithDir(tmpDir, ".")
+	if err != nil {
+		t.Fatalf("LoadPackages() error = %v", err)
+	}
+
+	p := parser.NewParser()
+	_, err = p.ParsePackages(pkgs)
+	if err == nil {
+		t.Fatal("Expected error for non-string discriminator, got nil")
+	}
+	if !strings.Contains(err.Error(), "discriminator only applies to string") {
+		t.Errorf("Expected discriminator type error, got: %v", err)
+	}
+}
+
+func TestParsePackages_VariantWithoutDiscriminator(t *testing.T) {
+	code := `package test
+
+type Payload struct {
+	X string ` + "`json:\"x\" gt:\"required\"`" + `
+}
+
+type Bad struct {
+	A *Payload ` + "`json:\"a,omitempty\" gt:\"variant:a\"`" + `
+}
+`
+
+	tmpDir := setupTestModule(t, code)
+
+	pkgs, err := load.LoadPackagesWithDir(tmpDir, ".")
+	if err != nil {
+		t.Fatalf("LoadPackages() error = %v", err)
+	}
+
+	p := parser.NewParser()
+	_, err = p.ParsePackages(pkgs)
+	if err == nil {
+		t.Fatal("Expected error for variant without discriminator, got nil")
+	}
+	if !strings.Contains(err.Error(), "no discriminator field") {
+		t.Errorf("Expected missing-discriminator error, got: %v", err)
 	}
 }
 

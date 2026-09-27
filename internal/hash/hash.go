@@ -31,6 +31,19 @@ func ComputeSchemaHash(s *schema.Schema) string {
 	h.Write([]byte(s.Name))
 	h.Write([]byte(s.PackageName))
 
+	// Discriminated-union shape (discriminator name + ordered variant values)
+	if s.Discriminator != nil {
+		h.Write([]byte("discriminatedUnion"))
+		h.Write([]byte(s.Discriminator.DiscriminatorName))
+		for _, v := range s.Discriminator.Variants {
+			h.Write([]byte(v.Value))
+			if v.PayloadField != nil {
+				h.Write([]byte(v.PayloadField.GoName))
+				writeType(h, v.PayloadField.Type)
+			}
+		}
+	}
+
 	// Sort fields by name for deterministic output
 	fields := make([]schema.Field, len(s.Fields))
 	copy(fields, s.Fields)
@@ -123,6 +136,12 @@ func writeRules(h hash256, rules schema.FieldRules) {
 		copy(enumCopy, rules.Enum)
 		sort.Strings(enumCopy)
 		h.Write([]byte(strings.Join(enumCopy, ",")))
+	}
+	if rules.IsDiscriminator {
+		h.Write([]byte("discriminator"))
+	}
+	if rules.Variant != "" {
+		h.Write([]byte("variant:" + rules.Variant))
 	}
 }
 

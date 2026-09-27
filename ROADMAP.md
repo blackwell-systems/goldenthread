@@ -72,10 +72,15 @@ Standard JSON Schema output as an alternative to Zod. Useful for non-TypeScript 
 
 Closing gaps in supported Go types:
 
-- **Union / discriminated union types** — tagged interfaces
 - **Recursive / self-referential types** — e.g. tree nodes
-- **Literal types** — fixed string/int values
+- **Literal types**: fixed string/int values (standalone)
 - **Fixed-length arrays** — `[N]T` tuples
+
+> **Discriminated union types shipped early.** A Go struct with a
+> `gt:"discriminator"` field and one `gt:"variant:<name>"` payload field per
+> variant now compiles to a Zod `z.discriminatedUnion`, pulled forward to serve
+> a visual flow-builder that consumes a Go wiring config. See
+> [CHANGELOG.md](CHANGELOG.md) and [docs/TAG_SPEC.md](docs/TAG_SPEC.md).
 
 ---
 
