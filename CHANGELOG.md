@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
 ### Added
 
 - **Opt-in json-tag inference** (`--infer-json`): a new flag on `generate` and
@@ -306,7 +308,8 @@ First stable release of goldenthread - a schema compiler that generates TypeScri
 - Comprehensive documentation and examples
 - Production-ready with 2 bugs found and fixed by fuzzing before release
 
-[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/blackwell-systems/goldenthread/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/blackwell-systems/goldenthread/compare/v0.1.1...v0.1.2

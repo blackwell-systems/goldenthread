@@ -6,7 +6,7 @@ Shipped work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## v0.2 — Wails Integration
+## v0.3 — Wails Integration
 
 Making goldenthread the standard schema companion for [Wails](https://wails.io) desktop apps.
 
@@ -15,7 +15,7 @@ Wails generates TypeScript bindings from bound Go structs, but provides no valid
 ### `goldenthread init --wails`
 
 > **Status: Planned.** This command is not yet implemented. The current
-> `goldenthread init` is a stub. Full Wails integration is the v0.2 milestone.
+> `goldenthread init` is a stub. Full Wails integration is the v0.3 milestone.
 
 Zero-friction setup for Wails projects:
 - Detect `wails.json` in project root
@@ -56,7 +56,7 @@ Deliverables:
 
 ---
 
-## v0.3 — Emitter Targets
+## v0.4 — Emitter Targets
 
 ### OpenAPI 3.1 emitter
 
@@ -68,7 +68,7 @@ Standard JSON Schema output as an alternative to Zod. Useful for non-TypeScript 
 
 ---
 
-## v0.4 — Type Coverage
+## v0.5 — Type Coverage
 
 Closing gaps in supported Go types:
 
