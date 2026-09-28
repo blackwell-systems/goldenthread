@@ -2,8 +2,6 @@
   <img src="asset-banner.png" alt="goldenthread">
 </p>
 
-# goldenthread
-
 > Schema compiler: Go structs → TypeScript/Zod.  Keep backend/frontend validation in sync automatically.
 
 [![Blackwell Systems™](https://raw.githubusercontent.com/blackwell-systems/blackwell-docs-theme/main/badge-trademark.svg)](https://github.com/blackwell-systems) 
