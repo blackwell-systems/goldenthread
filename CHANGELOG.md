@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Opt-in json-tag inference** (`--infer-json`): a new flag on `generate` and
+  `check` that generates schemas from structs carrying only standard `json:`
+  tags, with no `gt:` tags. Each gt-less field is synthesized from its json tag:
+  the field name is the json name (`json:"-"` is excluded), the field is optional
+  when the json tag has `,omitempty` or the Go field is a pointer, and the base
+  Zod type comes from the same Go-to-Zod mapping used for gt-tagged fields
+  (primitives, `[]T`, `map[string]T`, `*T`, and named-struct references). Structs
+  referenced by an included struct's fields are generated too. `gt:` tags always
+  take precedence: fields and structs that carry `gt:` keep their existing rules,
+  enums, and discriminated-union behavior, and inference only fills in what lacks
+  `gt:`. Mixing gt-tagged and json-only fields in one struct is supported. The
+  default is unchanged: without `--infer-json`, json-only structs still produce
+  nothing. Use it to bridge an external framework's plain json-tagged types
+  without adding `gt:` annotations to every field.
+
+### Fixed
+
+- **Flags after the directory argument are no longer silently ignored.**
+  `generate` and `check` now reorder arguments before parsing, so a flag placed
+  after the path (as the docs show, for example `goldenthread generate ./models
+  --out ./gen`) takes effect instead of being dropped by the standard flag parser
+  stopping at the first positional. Value flags (`--out`, `--target`) and the
+  `--` terminator are handled.
+
 ## [0.1.4] - 2026-09-26
 
 ### Added

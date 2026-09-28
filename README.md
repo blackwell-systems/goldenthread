@@ -411,6 +411,7 @@ Flags:
   --out <dir>       Output directory (default: ./gen)
   --recursive       Process subdirectories recursively
   --target <name>   Target format (default: zod)
+  --infer-json      Infer schemas from structs carrying only json: tags
 ```
 
 ### `check`
@@ -423,6 +424,7 @@ goldenthread check [flags] <directory>
 Flags:
   --metadata <file>  Metadata file to check against
   --recursive        Process subdirectories recursively
+  --infer-json       Infer schemas from structs carrying only json: tags
 ```
 
 Exit codes:
@@ -436,6 +438,38 @@ Initialize goldenthread configuration for a project.
 > **Note:** This command is not yet implemented. `goldenthread init --wails`
 > (Wails project auto-setup) is planned for v0.2. Running `goldenthread init`
 > currently prints a placeholder message.
+
+## Inferring from json: tags
+
+By default, goldenthread only generates a schema for a struct when one of its
+fields carries a `gt:` tag. Structs that have nothing but standard `json:` tags
+are skipped. The `--infer-json` flag opts in to a second mode: when it is set,
+goldenthread also generates schemas from structs that carry only `json:` tags,
+deriving each field from its json tag.
+
+```bash
+goldenthread generate ./models --infer-json
+goldenthread check ./models --infer-json
+```
+
+Use it to bridge types from an external framework that already tags its structs
+for JSON encoding, so you can produce Zod without adding `gt:` annotations to
+every field. Under inference:
+
+- The field name is the json tag name. A field tagged `json:"-"` is excluded.
+- A field is optional when its json tag has `,omitempty` or the Go field is a
+  pointer; otherwise it is required.
+- The base type comes from the same Go-to-Zod mapping used for gt-tagged fields:
+  primitives, `[]T`, `map[string]T`, `*T`, and named-struct references. A field
+  whose type is another struct (or a slice of one) emits a reference to that
+  struct's schema, and the referenced struct is generated too.
+
+`gt:` tags always take precedence. A field or struct that has `gt:` tags keeps
+its exact existing behavior: validation rules, enums, and discriminated unions
+are unchanged, and inference only fills in fields and structs that lack `gt:`.
+Mixing is allowed: a struct may have some gt-tagged fields and some json-only
+fields, and with `--infer-json` both appear in the output. Without the flag,
+behavior is unchanged: json-only structs still produce nothing.
 
 ## Current Limitations
 

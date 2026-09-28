@@ -24,6 +24,14 @@ type Parser struct {
 
 	// TypeInfo provides go/types information for proper type resolution (optional)
 	TypeInfo *load.TypeInfo
+
+	// InferJSON, when true, generates schemas for structs and fields that carry
+	// only standard `json:` tags (no `gt:` tags). This is opt-in: with it off,
+	// json-only structs and fields are skipped exactly as before. gt: tags always
+	// take precedence, so a field or struct that has gt tags keeps its gt behavior
+	// (rules, enums, discriminated unions) and inference only fills in what lacks
+	// gt. See the --infer-json flag on the generate/check commands.
+	InferJSON bool
 }
 
 // NewParser creates a new parser with default settings.
@@ -83,16 +91,11 @@ func (p *Parser) extractSchemasInternal(fset *token.FileSet, file *ast.File, pat
 			return true
 		}
 
-		// Check if any field has gt: tags
-		hasGTTags := false
-		for _, field := range structType.Fields.List {
-			if field.Tag != nil && p.hasRelevantTag(field.Tag.Value) {
-				hasGTTags = true
-				break
-			}
-		}
-
-		if !hasGTTags {
+		// A struct is a schema candidate if any field carries a gt: tag. With
+		// InferJSON on, a struct also qualifies when it has at least one field
+		// we can synthesize from a json: tag (or an exported field, when no json
+		// tag is present), so json-only structs are included too.
+		if !p.isSchemaCandidate(structType) {
 			return true
 		}
 
@@ -263,14 +266,14 @@ func camelCaseForJSON(goName string) string {
 // Returns (nil, nil) if field should be skipped (no tags).
 // Returns (nil, error) if field has invalid configuration.
 func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string, path string) (*schema.Field, error) {
-	if field.Tag == nil {
-		return nil, nil
+	var tags map[string]string
+	if field.Tag != nil {
+		tags = p.parseTags(field.Tag.Value)
+	} else {
+		tags = make(map[string]string)
 	}
 
-	tagValue := field.Tag.Value
-	tags := p.parseTags(tagValue)
-
-	// Check for gt: tag
+	// Check for gt: tag (or a fallback tag).
 	gtTag, hasGT := tags[p.TagName]
 	if !hasGT {
 		// Check fallback tags
@@ -284,6 +287,11 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 	}
 
 	if !hasGT {
+		// No gt tag. Without inference, the field is skipped exactly as before.
+		// With inference on, synthesize the field from its json: tag instead.
+		if p.InferJSON {
+			return p.inferField(fset, field, name, tags, path)
+		}
 		return nil, nil
 	}
 
@@ -347,6 +355,113 @@ func (p *Parser) extractField(fset *token.FileSet, field *ast.Field, name string
 	f.Type = p.extractTypeWithInfo(field.Type, p.TypeInfo)
 
 	// Extract documentation (prefer Doc, fallback to Comment)
+	if field.Doc != nil {
+		f.Documentation = normalizeDoc(field.Doc.Text())
+	} else if field.Comment != nil {
+		f.Documentation = normalizeDoc(field.Comment.Text())
+	}
+
+	return f, nil
+}
+
+// isSchemaCandidate reports whether a struct should be turned into a schema.
+// A struct always qualifies when any field carries a gt: (or fallback) tag.
+// When InferJSON is on, a struct also qualifies if it has at least one field
+// that inference can synthesize: a field with a json: tag that is not json:"-",
+// or an exported field with no json tag at all.
+func (p *Parser) isSchemaCandidate(structType *ast.StructType) bool {
+	for _, field := range structType.Fields.List {
+		if field.Tag != nil && p.hasRelevantTag(field.Tag.Value) {
+			return true
+		}
+	}
+
+	if !p.InferJSON {
+		return false
+	}
+
+	for _, field := range structType.Fields.List {
+		var tags map[string]string
+		if field.Tag != nil {
+			tags = p.parseTags(field.Tag.Value)
+		}
+		if p.fieldInferable(field, tags) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// fieldInferable reports whether a gt-less field can be synthesized from its
+// json: tag under inference. A field named json:"-" is excluded. Embedded
+// fields (no names) are left to the existing embedded-field handling. An
+// unexported field with no json tag is excluded.
+func (p *Parser) fieldInferable(field *ast.Field, tags map[string]string) bool {
+	// Embedded fields have no names; they are handled by extractEmbeddedField.
+	if len(field.Names) == 0 {
+		return false
+	}
+
+	if _, ok := tags["json"]; ok {
+		return p.extractJSONName(tags) != "-"
+	}
+
+	// No json tag: include only exported fields, matching Go's json encoding
+	// which ignores unexported fields.
+	for _, name := range field.Names {
+		if ast.IsExported(name.Name) {
+			return true
+		}
+	}
+	return false
+}
+
+// inferField synthesizes a schema Field from a gt-less field using its json:
+// tag. The field is excluded (nil, nil) when json:"-" marks it, or when it has
+// no json tag and is unexported. The base type is derived from the Go field
+// type via the same type mapping used for gt-tagged fields; optionality follows
+// json ,omitempty or a pointer type.
+func (p *Parser) inferField(fset *token.FileSet, field *ast.Field, name string, tags map[string]string, path string) (*schema.Field, error) {
+	// Unexported fields with no json tag are not part of the JSON shape.
+	if _, ok := tags["json"]; !ok && !ast.IsExported(name) {
+		return nil, nil
+	}
+
+	jsonName := p.extractJSONName(tags)
+	if jsonName == "-" {
+		// Explicitly excluded from JSON.
+		return nil, nil
+	}
+	if jsonName == "" {
+		// No json tag (or a bare ,omitempty tag): fall back to the emitter's
+		// json-name convention, matching how gt-tagged fields without a json
+		// name are emitted.
+		jsonName = camelCaseForJSON(name)
+	}
+
+	pos := fset.Position(field.Pos())
+	f := &schema.Field{
+		GoName:   name,
+		JSONName: jsonName,
+		Tags:     tags,
+		Rules:    schema.FieldRules{},
+		Pos: schema.SourcePos{
+			File:   path,
+			Line:   pos.Line,
+			Column: pos.Column,
+		},
+	}
+
+	// Optional if json has ,omitempty or the Go field is a pointer; required
+	// otherwise.
+	f.Optional = p.isPointer(field.Type) || p.hasOmitEmpty(tags)
+
+	// Reuse the shared type mapping so primitives, []T, map[string]T, *T, and
+	// named-struct references behave identically to gt-tagged fields.
+	f.Type = p.extractTypeWithInfo(field.Type, p.TypeInfo)
+
+	// Extract documentation (prefer Doc, fallback to Comment).
 	if field.Doc != nil {
 		f.Documentation = normalizeDoc(field.Doc.Text())
 	} else if field.Comment != nil {

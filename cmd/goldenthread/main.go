@@ -31,6 +31,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/blackwell-systems/goldenthread/internal/emitter/zod"
 	"github.com/blackwell-systems/goldenthread/internal/hash"
@@ -38,6 +39,37 @@ import (
 	"github.com/blackwell-systems/goldenthread/internal/normalize"
 	"github.com/blackwell-systems/goldenthread/internal/parser"
 )
+
+// valueFlags names the flags that consume a following argument when written in
+// the space-separated form (for example "--out ./gen"). Used by reorderFlagArgs.
+var valueFlags = map[string]bool{"out": true, "target": true}
+
+// reorderFlagArgs moves flags (and the value of a space-separated value flag)
+// ahead of positional arguments. Go's flag package stops parsing at the first
+// positional, so without this a flag placed after the directory (as the docs
+// show, e.g. "generate ./models --out ./gen") would be silently ignored. A "--"
+// terminator passes the remainder through as positionals.
+func reorderFlagArgs(args []string) []string {
+	var flags, positionals []string
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if a == "--" {
+			positionals = append(positionals, args[i:]...)
+			break
+		}
+		if len(a) > 1 && strings.HasPrefix(a, "-") {
+			flags = append(flags, a)
+			name := strings.TrimLeft(a, "-")
+			if !strings.ContainsRune(name, '=') && valueFlags[name] && i+1 < len(args) {
+				i++
+				flags = append(flags, args[i])
+			}
+			continue
+		}
+		positionals = append(positionals, a)
+	}
+	return append(flags, positionals...)
+}
 
 // Version information (set by goreleaser)
 var (
@@ -112,6 +144,7 @@ func generate(args []string) error {
 	outDir := fs.String("out", "./gen", "output directory for generated files")
 	target := fs.String("target", "zod", "generation target (zod, typescript, openapi)")
 	recursive := fs.Bool("recursive", false, "recursively process subdirectories")
+	inferJSON := fs.Bool("infer-json", false, "infer schemas from structs carrying only json: tags (gt: tags still take precedence)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: goldenthread generate [options] <directory>\n\n")
@@ -119,7 +152,7 @@ func generate(args []string) error {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(reorderFlagArgs(args)); err != nil {
 		return err
 	}
 
@@ -152,13 +185,18 @@ func generate(args []string) error {
 	}
 
 	p := parser.NewParser()
+	p.InferJSON = *inferJSON
 	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
 	}
 
 	if len(schemas) == 0 {
-		fmt.Println("No schemas found with gt: tags")
+		if *inferJSON {
+			fmt.Println("No schemas found (no gt: tags and no inferable json: fields)")
+		} else {
+			fmt.Println("No schemas found with gt: tags")
+		}
 		return nil
 	}
 
@@ -233,6 +271,7 @@ func check(args []string) error {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	outDir := fs.String("out", "./gen", "output directory to check")
 	recursive := fs.Bool("recursive", false, "recursively process subdirectories")
+	inferJSON := fs.Bool("infer-json", false, "infer schemas from structs carrying only json: tags (gt: tags still take precedence)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: goldenthread check [options] <directory>\n\n")
@@ -240,7 +279,7 @@ func check(args []string) error {
 		fs.PrintDefaults()
 	}
 
-	if err := fs.Parse(args); err != nil {
+	if err := fs.Parse(reorderFlagArgs(args)); err != nil {
 		return err
 	}
 
@@ -278,6 +317,7 @@ func check(args []string) error {
 	}
 
 	p := parser.NewParser()
+	p.InferJSON = *inferJSON
 	schemas, err := p.ParsePackages(pkgs)
 	if err != nil {
 		return fmt.Errorf("failed to parse schemas: %w", err)
