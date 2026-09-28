@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="asset-banner.png" alt="goldenthread">
+</p>
+
 # goldenthread
 
 > Schema compiler: Go structs → TypeScript/Zod.  Keep backend/frontend validation in sync automatically.
