@@ -1,7 +1,7 @@
 [English](../../README.md) · [简体中文](README.zh-CN.md) · **Русский** · [हिन्दी](README.hi.md) · [العربية](README.ar.md)
 
 <p align="center">
-  <img src="asset-banner.png" alt="goldenthread">
+  <img src="../../asset-banner.png" alt="goldenthread">
 </p>
 
 > Компилятор схем: структуры Go → TypeScript/Zod. Автоматически поддерживает синхронность валидации на бэкенде и фронтенде.
@@ -12,7 +12,7 @@
 [![CI](https://github.com/blackwell-systems/goldenthread/workflows/CI/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/ci.yml)
 [![Lint](https://github.com/blackwell-systems/goldenthread/workflows/Lint/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/lint.yml)
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../../LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 
 **goldenthread** — это компилятор схем времени сборки, который генерирует готовую к продакшену валидацию Zod из структур Go. Опишите правила валидации один раз в тегах Go и автоматически получите типобезопасные схемы TypeScript. Встроенное обнаружение расхождений выявляет несоответствия схем в CI. Никакой ручной синхронизации. Никаких накладных расходов во время выполнения.
@@ -99,7 +99,7 @@ type Product struct {
 }
 ```
 
-Полный синтаксис тегов см. в [docs/TAG_SPEC.md](docs/TAG_SPEC.md).
+Полный синтаксис тегов см. в [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md).
 
 ## Установка
 
@@ -235,7 +235,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 | Named struct | `TypeSchema` | References to other schemas |
 | Embedded struct | Fields flattened | Anonymous fields promoted |
 
-Полный охват типов см. в [docs/FEATURES.md](docs/FEATURES.md).
+Полный охват типов см. в [docs/FEATURES.md](../../docs/FEATURES.md).
 
 ## Теги валидации
 
@@ -275,7 +275,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 - `min:N` — минимальная длина массива
 - `max:N` — максимальная длина массива
 
-Подробную спецификацию см. в [docs/TAG_SPEC.md](docs/TAG_SPEC.md).
+Подробную спецификацию см. в [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md).
 
 ## Примеры
 
@@ -380,7 +380,7 @@ const WiringElementSchema = z.discriminatedUnion('kind', [
 
 Полезная нагрузка эмитируется как обязательная внутри своего варианта: элемент,
 помеченный как `edge`, но без полезной нагрузки `edge`, не проходит валидацию.
-См. [examples/wiring](examples/wiring/).
+См. [examples/wiring](../../examples/wiring/).
 
 ### Отображения
 
@@ -530,13 +530,13 @@ goldenthread оптимизирован для команд, которые:
 
 ## Документация
 
-- [Tag Specification](docs/TAG_SPEC.md) — полный справочник по синтаксису тегов
-- [Feature Matrix](docs/FEATURES.md) — подробная разбивка возможностей
-- [Architecture](docs/ARCHITECTURE.md) — архитектура системы и детали реализации
-- [Testing Strategy](docs/TESTING.md) — набор тестов и руководство по непрерывному фаззингу
-- [Fuzzing Bug Log](docs/FUZZING_BUGS.md) — ошибки, обнаруженные непрерывным фаззингом
-- [Brand Guidelines](BRAND.md) — использование товарного знака и логотипа
-- [Changelog](CHANGELOG.md) — история версий и изменения
+- [Tag Specification](../../docs/TAG_SPEC.md) — полный справочник по синтаксису тегов
+- [Feature Matrix](../../docs/FEATURES.md) — подробная разбивка возможностей
+- [Architecture](../../docs/ARCHITECTURE.md) — архитектура системы и детали реализации
+- [Testing Strategy](../../docs/TESTING.md) — набор тестов и руководство по непрерывному фаззингу
+- [Fuzzing Bug Log](../../docs/FUZZING_BUGS.md) — ошибки, обнаруженные непрерывным фаззингом
+- [Brand Guidelines](../../BRAND.md) — использование товарного знака и логотипа
+- [Changelog](../../CHANGELOG.md) — история версий и изменения
 
 ## Разработка
 
@@ -595,11 +595,11 @@ goldenthread следует этим принципам:
 
 Двойное лицензирование на ваш выбор:
 
-- **Apache License 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
-- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+- **Apache License 2.0** ([LICENSE-APACHE](../../LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](../../LICENSE-MIT))
 
 Большинство пользователей предпочитают MIT ради простоты. Apache 2.0 предоставляет дополнительную патентную защиту.
 
 ## Товарные знаки
 
-**Blackwell Systems™** и **логотип Blackwell Systems** являются товарными знаками Dayna Blackwell. Вы можете использовать название «Blackwell Systems» для обозначения этого проекта, но не вправе использовать это название или логотип так, чтобы это создавало впечатление одобрения или официальной аффилиации, без предварительного письменного разрешения. Рекомендации по использованию см. в [BRAND.md](BRAND.md).
+**Blackwell Systems™** и **логотип Blackwell Systems** являются товарными знаками Dayna Blackwell. Вы можете использовать название «Blackwell Systems» для обозначения этого проекта, но не вправе использовать это название или логотип так, чтобы это создавало впечатление одобрения или официальной аффилиации, без предварительного письменного разрешения. Рекомендации по использованию см. в [BRAND.md](../../BRAND.md).

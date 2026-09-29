@@ -1,7 +1,7 @@
 [English](../../README.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md) · [हिन्दी](README.hi.md) · **العربية**
 
 <p align="center">
-  <img src="asset-banner.png" alt="goldenthread">
+  <img src="../../asset-banner.png" alt="goldenthread">
 </p>
 
 > مُصرِّف schema: بُنى Go (structs) → TypeScript/Zod. حافظ على تزامن التحقق بين الخلفية والواجهة الأمامية تلقائيًا.
@@ -12,7 +12,7 @@
 [![CI](https://github.com/blackwell-systems/goldenthread/workflows/CI/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/ci.yml)
 [![Lint](https://github.com/blackwell-systems/goldenthread/workflows/Lint/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/lint.yml)
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../../LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 
 **goldenthread** هو مُصرِّف schema يعمل في وقت البناء ويولّد تحقق Zod جاهزًا للإنتاج انطلاقًا من بُنى Go. اكتب قواعد التحقق مرة واحدة في وسوم Go، واحصل تلقائيًا على schemas من TypeScript آمنة على مستوى النوع. يكتشف اكتشاف الانحراف المدمج عدم تطابق الـ schema في CI. لا مزامنة يدوية. لا عبء في وقت التشغيل.
@@ -99,7 +99,7 @@ type Product struct {
 }
 ```
 
-راجع [docs/TAG_SPEC.md](docs/TAG_SPEC.md) للاطلاع على صياغة الوسوم الكاملة.
+راجع [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md) للاطلاع على صياغة الوسوم الكاملة.
 
 ## التثبيت
 
@@ -235,7 +235,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 | Named struct | `TypeSchema` | References to other schemas |
 | Embedded struct | Fields flattened | Anonymous fields promoted |
 
-راجع [docs/FEATURES.md](docs/FEATURES.md) للاطلاع على التغطية الكاملة للأنواع.
+راجع [docs/FEATURES.md](../../docs/FEATURES.md) للاطلاع على التغطية الكاملة للأنواع.
 
 ## وسوم التحقق
 
@@ -275,7 +275,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 - `min:N` - الطول الأدنى للمصفوفة
 - `max:N` - الطول الأقصى للمصفوفة
 
-راجع [docs/TAG_SPEC.md](docs/TAG_SPEC.md) للاطلاع على المواصفة التفصيلية.
+راجع [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md) للاطلاع على المواصفة التفصيلية.
 
 ## أمثلة
 
@@ -379,7 +379,7 @@ const WiringElementSchema = z.discriminatedUnion('kind', [
 ```
 
 تُصدَر الحمولة بوصفها مطلوبة داخل مُتغيِّرها: عنصر موسوم بـ `edge`
-بلا حمولة `edge` يفشل في التحقق. راجع [examples/wiring](examples/wiring/).
+بلا حمولة `edge` يفشل في التحقق. راجع [examples/wiring](../../examples/wiring/).
 
 ### الخرائط
 
@@ -526,13 +526,13 @@ goldenthread مُحسَّن للفرق التي:
 
 ## التوثيق
 
-- [Tag Specification](docs/TAG_SPEC.md) - مرجع كامل لصياغة الوسوم
-- [Feature Matrix](docs/FEATURES.md) - تفصيل مُفصَّل للقدرات
-- [Architecture](docs/ARCHITECTURE.md) - تصميم النظام وتفاصيل التنفيذ
-- [Testing Strategy](docs/TESTING.md) - مجموعة الاختبارات ودليل الـ fuzzing المستمر
-- [Fuzzing Bug Log](docs/FUZZING_BUGS.md) - العلل المُكتشَفة عبر الـ fuzzing المستمر
-- [Brand Guidelines](BRAND.md) - استخدام العلامة التجارية والشعار
-- [Changelog](CHANGELOG.md) - سجل الإصدارات والتغييرات
+- [Tag Specification](../../docs/TAG_SPEC.md) - مرجع كامل لصياغة الوسوم
+- [Feature Matrix](../../docs/FEATURES.md) - تفصيل مُفصَّل للقدرات
+- [Architecture](../../docs/ARCHITECTURE.md) - تصميم النظام وتفاصيل التنفيذ
+- [Testing Strategy](../../docs/TESTING.md) - مجموعة الاختبارات ودليل الـ fuzzing المستمر
+- [Fuzzing Bug Log](../../docs/FUZZING_BUGS.md) - العلل المُكتشَفة عبر الـ fuzzing المستمر
+- [Brand Guidelines](../../BRAND.md) - استخدام العلامة التجارية والشعار
+- [Changelog](../../CHANGELOG.md) - سجل الإصدارات والتغييرات
 
 ## التطوير
 
@@ -591,11 +591,11 @@ go test ./... -cover
 
 مُرخَّص ترخيصًا مزدوجًا حسب اختيارك من بين:
 
-- **Apache License 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
-- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+- **Apache License 2.0** ([LICENSE-APACHE](../../LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](../../LICENSE-MIT))
 
 يُفضِّل معظم المستخدمين MIT لبساطته. ويوفّر Apache 2.0 حمايات إضافية لبراءات الاختراع.
 
 ## العلامات التجارية
 
-**Blackwell Systems™** و**شعار Blackwell Systems** علامتان تجاريتان لـ Dayna Blackwell. يجوز لك استخدام الاسم "Blackwell Systems" للإشارة إلى هذا المشروع، لكن لا يجوز لك استخدام الاسم أو الشعار بطريقة توحي بالمصادقة أو الانتساب الرسمي دون إذن خطي مسبق. راجع [BRAND.md](BRAND.md) للاطلاع على إرشادات الاستخدام.
+**Blackwell Systems™** و**شعار Blackwell Systems** علامتان تجاريتان لـ Dayna Blackwell. يجوز لك استخدام الاسم "Blackwell Systems" للإشارة إلى هذا المشروع، لكن لا يجوز لك استخدام الاسم أو الشعار بطريقة توحي بالمصادقة أو الانتساب الرسمي دون إذن خطي مسبق. راجع [BRAND.md](../../BRAND.md) للاطلاع على إرشادات الاستخدام.

@@ -1,7 +1,7 @@
 [English](../../README.md) · **简体中文** · [Русский](README.ru.md) · [हिन्दी](README.hi.md) · [العربية](README.ar.md)
 
 <p align="center">
-  <img src="asset-banner.png" alt="goldenthread">
+  <img src="../../asset-banner.png" alt="goldenthread">
 </p>
 
 > Schema 编译器：Go 结构体 → TypeScript/Zod。自动保持后端/前端校验同步。
@@ -12,7 +12,7 @@
 [![CI](https://github.com/blackwell-systems/goldenthread/workflows/CI/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/ci.yml)
 [![Lint](https://github.com/blackwell-systems/goldenthread/workflows/Lint/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/lint.yml)
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../../LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 
 **goldenthread** 是一款构建期 schema 编译器，可从 Go 结构体生成生产就绪的 Zod 校验。校验规则只需在 Go 标签中编写一次，即可自动获得类型安全的 TypeScript schema。内置的漂移检测能在 CI 中捕获 schema 不一致。无需手动同步。无运行时开销。
@@ -99,7 +99,7 @@ type Product struct {
 }
 ```
 
-完整的标签语法见 [docs/TAG_SPEC.md](docs/TAG_SPEC.md)。
+完整的标签语法见 [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md)。
 
 ## 安装
 
@@ -235,7 +235,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 | Named struct | `TypeSchema` | References to other schemas |
 | Embedded struct | Fields flattened | Anonymous fields promoted |
 
-完整的类型覆盖见 [docs/FEATURES.md](docs/FEATURES.md)。
+完整的类型覆盖见 [docs/FEATURES.md](../../docs/FEATURES.md)。
 
 ## 校验标签
 
@@ -275,7 +275,7 @@ Go Source → Parser → Intermediate Representation → Emitter → Generated C
 - `min:N` - 最小数组长度
 - `max:N` - 最大数组长度
 
-详细规范见 [docs/TAG_SPEC.md](docs/TAG_SPEC.md)。
+详细规范见 [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md)。
 
 ## 示例
 
@@ -379,7 +379,7 @@ const WiringElementSchema = z.discriminatedUnion('kind', [
 ```
 
 载荷在其变体内以必填形式发射：一个标记为 `edge` 且没有 `edge` 载荷的元素
-将无法通过校验。参见 [examples/wiring](examples/wiring/)。
+将无法通过校验。参见 [examples/wiring](../../examples/wiring/)。
 
 ### 映射
 
@@ -524,13 +524,13 @@ goldenthread 为以下团队优化：
 
 ## 文档
 
-- [Tag Specification](docs/TAG_SPEC.md) - 完整的标签语法参考
-- [Feature Matrix](docs/FEATURES.md) - 详细的能力细分
-- [Architecture](docs/ARCHITECTURE.md) - 系统设计与实现细节
-- [Testing Strategy](docs/TESTING.md) - 测试套件与持续模糊测试指南
-- [Fuzzing Bug Log](docs/FUZZING_BUGS.md) - 持续模糊测试发现的缺陷
-- [Brand Guidelines](BRAND.md) - 商标与徽标使用
-- [Changelog](CHANGELOG.md) - 版本历史与变更
+- [Tag Specification](../../docs/TAG_SPEC.md) - 完整的标签语法参考
+- [Feature Matrix](../../docs/FEATURES.md) - 详细的能力细分
+- [Architecture](../../docs/ARCHITECTURE.md) - 系统设计与实现细节
+- [Testing Strategy](../../docs/TESTING.md) - 测试套件与持续模糊测试指南
+- [Fuzzing Bug Log](../../docs/FUZZING_BUGS.md) - 持续模糊测试发现的缺陷
+- [Brand Guidelines](../../BRAND.md) - 商标与徽标使用
+- [Changelog](../../CHANGELOG.md) - 版本历史与变更
 
 ## 开发
 
@@ -589,11 +589,11 @@ goldenthread 遵循以下原则：
 
 在以下两者中任选其一进行双重许可：
 
-- **Apache License 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
-- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+- **Apache License 2.0** ([LICENSE-APACHE](../../LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](../../LICENSE-MIT))
 
 大多数用户为求简便而选择 MIT。Apache 2.0 则提供额外的专利保护。
 
 ## 商标
 
-**Blackwell Systems™** 和 **Blackwell Systems 徽标**是 Dayna Blackwell 的商标。你可以使用“Blackwell Systems”这一名称来指代本项目，但未经事先书面许可，你不得以暗示背书或官方从属关系的方式使用该名称或徽标。使用指南见 [BRAND.md](BRAND.md)。
+**Blackwell Systems™** 和 **Blackwell Systems 徽标**是 Dayna Blackwell 的商标。你可以使用“Blackwell Systems”这一名称来指代本项目，但未经事先书面许可，你不得以暗示背书或官方从属关系的方式使用该名称或徽标。使用指南见 [BRAND.md](../../BRAND.md)。

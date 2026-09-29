@@ -1,7 +1,7 @@
 [English](../../README.md) · [简体中文](README.zh-CN.md) · [Русский](README.ru.md) · **हिन्दी** · [العربية](README.ar.md)
 
 <p align="center">
-  <img src="asset-banner.png" alt="goldenthread">
+  <img src="../../asset-banner.png" alt="goldenthread">
 </p>
 
 > Schema कंपाइलर: Go structs → TypeScript/Zod। बैकएंड/फ्रंटएंड सत्यापन को अपने आप समकालिक रखें।
@@ -12,7 +12,7 @@
 [![CI](https://github.com/blackwell-systems/goldenthread/workflows/CI/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/ci.yml)
 [![Lint](https://github.com/blackwell-systems/goldenthread/workflows/Lint/badge.svg)](https://github.com/blackwell-systems/goldenthread/actions/workflows/lint.yml)
 
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](LICENSE-APACHE) 
+[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](../../LICENSE-APACHE) 
 [![Sponsor](https://img.shields.io/badge/Sponsor-Buy%20Me%20a%20Coffee-yellow?logo=buy-me-a-coffee&logoColor=white)](https://buymeacoffee.com/blackwellsystems)
 
 **goldenthread** एक build-time schema कंपाइलर है जो Go structs से production-ready Zod सत्यापन उत्पन्न करता है। सत्यापन नियम Go tags में एक बार लिखें, और अपने आप type-safe TypeScript schemas पाएँ। अंतर्निहित drift detection CI में schema बेमेल को पकड़ता है। कोई मैनुअल समकालन नहीं। कोई runtime overhead नहीं।
@@ -99,7 +99,7 @@ type Product struct {
 }
 ```
 
-पूर्ण tag syntax के लिए [docs/TAG_SPEC.md](docs/TAG_SPEC.md) देखें।
+पूर्ण tag syntax के लिए [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md) देखें।
 
 ## स्थापना
 
@@ -235,7 +235,7 @@ metadata tracking (`.goldenthread.json`) के साथ schema सामग्
 | Named struct | `TypeSchema` | References to other schemas |
 | Embedded struct | Fields flattened | Anonymous fields promoted |
 
-पूर्ण type coverage के लिए [docs/FEATURES.md](docs/FEATURES.md) देखें।
+पूर्ण type coverage के लिए [docs/FEATURES.md](../../docs/FEATURES.md) देखें।
 
 ## सत्यापन Tags
 
@@ -275,7 +275,7 @@ metadata tracking (`.goldenthread.json`) के साथ schema सामग्
 - `min:N` - न्यूनतम array लंबाई
 - `max:N` - अधिकतम array लंबाई
 
-विस्तृत विनिर्देश के लिए [docs/TAG_SPEC.md](docs/TAG_SPEC.md) देखें।
+विस्तृत विनिर्देश के लिए [docs/TAG_SPEC.md](../../docs/TAG_SPEC.md) देखें।
 
 ## उदाहरण
 
@@ -380,7 +380,7 @@ const WiringElementSchema = z.discriminatedUnion('kind', [
 
 payload अपने variant के भीतर required के रूप में उत्सर्जित होता है: `edge` के रूप
 में टैग किया गया एक element जिसमें कोई `edge` payload न हो, सत्यापन में विफल हो
-जाता है। देखें [examples/wiring](examples/wiring/)।
+जाता है। देखें [examples/wiring](../../examples/wiring/)।
 
 ### Maps
 
@@ -531,13 +531,13 @@ goldenthread उन टीमों के लिए अनुकूलित �
 
 ## दस्तावेज़ीकरण
 
-- [Tag Specification](docs/TAG_SPEC.md) - पूर्ण tag syntax संदर्भ
-- [Feature Matrix](docs/FEATURES.md) - विस्तृत क्षमता विवरण
-- [Architecture](docs/ARCHITECTURE.md) - सिस्टम डिज़ाइन और कार्यान्वयन विवरण
-- [Testing Strategy](docs/TESTING.md) - test suite और continuous fuzzing मार्गदर्शिका
-- [Fuzzing Bug Log](docs/FUZZING_BUGS.md) - continuous fuzzing द्वारा खोजी गई बग्स
-- [Brand Guidelines](BRAND.md) - Trademark और logo उपयोग
-- [Changelog](CHANGELOG.md) - संस्करण इतिहास और परिवर्तन
+- [Tag Specification](../../docs/TAG_SPEC.md) - पूर्ण tag syntax संदर्भ
+- [Feature Matrix](../../docs/FEATURES.md) - विस्तृत क्षमता विवरण
+- [Architecture](../../docs/ARCHITECTURE.md) - सिस्टम डिज़ाइन और कार्यान्वयन विवरण
+- [Testing Strategy](../../docs/TESTING.md) - test suite और continuous fuzzing मार्गदर्शिका
+- [Fuzzing Bug Log](../../docs/FUZZING_BUGS.md) - continuous fuzzing द्वारा खोजी गई बग्स
+- [Brand Guidelines](../../BRAND.md) - Trademark और logo उपयोग
+- [Changelog](../../CHANGELOG.md) - संस्करण इतिहास और परिवर्तन
 
 ## विकास
 
@@ -596,11 +596,11 @@ goldenthread इन सिद्धांतों का पालन करत
 
 आपकी पसंद के अनुसार दोहरे-लाइसेंस के अंतर्गत:
 
-- **Apache License 2.0** ([LICENSE-APACHE](LICENSE-APACHE))
-- **MIT License** ([LICENSE-MIT](LICENSE-MIT))
+- **Apache License 2.0** ([LICENSE-APACHE](../../LICENSE-APACHE))
+- **MIT License** ([LICENSE-MIT](../../LICENSE-MIT))
 
 अधिकांश उपयोगकर्ता सरलता के लिए MIT को प्राथमिकता देते हैं। Apache 2.0 अतिरिक्त patent सुरक्षा प्रदान करता है।
 
 ## ट्रेडमार्क
 
-**Blackwell Systems™** और **Blackwell Systems logo**, Dayna Blackwell के trademarks हैं। आप इस project को संदर्भित करने के लिए "Blackwell Systems" नाम का उपयोग कर सकते हैं, परंतु पूर्व लिखित अनुमति के बिना आप इस नाम या logo का उपयोग इस प्रकार नहीं कर सकते जिससे endorsement या आधिकारिक संबद्धता का आभास हो। उपयोग दिशानिर्देशों के लिए [BRAND.md](BRAND.md) देखें।
+**Blackwell Systems™** और **Blackwell Systems logo**, Dayna Blackwell के trademarks हैं। आप इस project को संदर्भित करने के लिए "Blackwell Systems" नाम का उपयोग कर सकते हैं, परंतु पूर्व लिखित अनुमति के बिना आप इस नाम या logo का उपयोग इस प्रकार नहीं कर सकते जिससे endorsement या आधिकारिक संबद्धता का आभास हो। उपयोग दिशानिर्देशों के लिए [BRAND.md](../../BRAND.md) देखें।
